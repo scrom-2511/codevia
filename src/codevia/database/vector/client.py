@@ -1,11 +1,6 @@
+from .utils.tools import Vector
 from typing_extensions import Optional
-from typing import TypedDict
 import pinecone
-
-class Vector(TypedDict):
-    id: str
-    values: list[float]
-    metadata: dict
 
 class VectorDB:
     def __init__(self, api_key:Optional[str] = None, host:Optional[str] = None):
