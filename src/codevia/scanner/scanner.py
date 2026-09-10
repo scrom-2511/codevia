@@ -14,7 +14,7 @@ class Scanner:
             if file.is_file():
                 try:
                     content = file.read_text(encoding="utf-8")
-                    print(content)
+                    yield file, content
                 except UnicodeDecodeError:
                     print(f"Skipping binary file: {file}")
 
