@@ -4,6 +4,7 @@ from dataclasses import dataclass
 class Metadata:
     path: str
     chunk_index: int
+    text: str
 
 @dataclass
 class Vector:
