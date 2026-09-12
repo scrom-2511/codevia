@@ -8,7 +8,24 @@ class LLMClient:
     def __init__(self):
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
         
-    def generate_response(self, prompt: str) -> dict:
+    def generate_response(self, query: str, context:str) -> dict:
+        prompt = f"""
+        You are a codebase assistant.
+
+        Answer the user's question using the provided code context.
+
+        User question:
+        {query}
+
+        Code context:
+        {context}
+
+        Instructions:
+        - Answer based on the provided code.
+        - Mention relevant file paths.
+        - If the context does not contain enough information, say so.
+        """
+
         response = self.client.interactions.create(
             model=os.getenv("GEMINI_MODEL"),
             input=prompt
