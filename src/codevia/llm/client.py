@@ -1,3 +1,4 @@
+from codevia.key_provider.api_key_provider import ApiKeyProvider
 from google import genai
 from dotenv import load_dotenv
 import os
@@ -5,8 +6,9 @@ import os
 load_dotenv()
 
 class LLMClient:
-    def __init__(self):
-        self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    def __init__(self, api_keys_provider: ApiKeyProvider):
+        # self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY")) <---- use this in prod
+        self.api_keys_provider = api_keys_provider
 
     def get_prompt(self, query: str, context: str) -> str:
             return f"""
@@ -28,8 +30,9 @@ class LLMClient:
         
     def generate_response(self, query: str, context:str) -> dict:
         prompt = self.get_prompt(query, context)
+        client = genai.Client(api_key=self.api_keys_provider.get_api_key())
 
-        response = self.client.interactions.create(
+        response = client.interactions.create(
             model=os.getenv("GEMINI_MODEL"),
             input=prompt
         )
@@ -38,8 +41,9 @@ class LLMClient:
 
     def generate_stream_response(self, query: str, context:str):
         prompt = self.get_prompt(query, context)
+        client = genai.Client(api_key=self.api_keys_provider.get_api_key())
 
-        stream = self.client.interactions.create(
+        stream = client.interactions.create(
             model=os.getenv("GEMINI_MODEL"),
             input=prompt,
             stream=True
