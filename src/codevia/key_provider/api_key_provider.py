@@ -1,15 +1,15 @@
 from codevia.database.redis.client import RedisDb
 import redis
 
-class ApiKeyProvider(RedisDb):
-    def __init__(self):
+class ApiKeyProvider:
+    def __init__(self, redisDb: RedisDb):
         self.api_provider_key = "api_keys"
-        self.redisClient: redis.Redis = RedisDb.redisClient
+        self.redisClient: redis.Redis = redisDb.redisClient
         self.api_keys = ["key_1"]
 
-        self.add_api_keys()
+        self._add_api_keys()
 
-    def add_api_keys(self):
+    def _add_api_keys(self):
         try:
             self.redisClient.lpush(self.api_provider_key, *self.api_keys)
         except Exception as e:
