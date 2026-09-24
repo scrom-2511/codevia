@@ -35,3 +35,15 @@ class Conversations:
             self.redisClient.rpush(redis_key, raw_data)
         except Exception as e:
             print(f"Error adding message to redis: {e}")
+
+    def get_history(self, conversation_id: str) -> list[Conversation]:
+        redis_key = f"{self.redis_base_key}:{conversation_id}"
+
+        try:
+            raw_history = self.redisClient.lrange(redis_key, 0, -1)
+            conversation_history: list[Conversation] = [json.loads(conversation) for conversation in raw_history]
+            return conversation_history
+
+        except Exception as e:
+            print(f"Error retrieving history from redis: {e}")
+            return []
