@@ -22,12 +22,30 @@ class WorkspaceTools:
 
         return target_path
 
-    def read_file(self, file_path: str) -> str:
+    def read_file(self, file_path: str, start: int|None = None, end: int|None = None) -> str:
         try:
             file_path_with_cwd = self._resolve_safe_path(file_path)
 
             with open(file_path_with_cwd, "r", encoding="utf-8") as file:
-                return file.read()
+                lines = file.readlines()
+
+                start = 1 if start is None else start
+                end = len(lines) if end is None else end
+
+                if start < 1:
+                    raise ValueError("start must be >= 1")
+
+                if end < start:
+                    raise ValueError("end must be >= start")
+
+                selected = lines[start - 1:end]
+
+                final_str = ""
+                
+                for i, str in enumerate(selected, start=start):
+                    final_str += (f"{i}: {str}")
+
+                return final_str
 
         except Exception as e:
             return str(e)
@@ -85,7 +103,7 @@ class WorkspaceTools:
 
 if __name__ == "__main__":
     tools = WorkspaceTools()
-    print(tools.read_file("../env"))
+    print(tools.read_file("./.env", 1, 2))
     print(tools.list_files(recursive=False))
     print(tools.list_files(recursive=True))
     print(tools.list_directories(recursive=False))
