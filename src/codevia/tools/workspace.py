@@ -1,3 +1,6 @@
+import subprocess
+import platform
+import shutil
 from pathlib import Path
 import os
 
@@ -110,10 +113,82 @@ class WorkspaceTools:
         except Exception as e:
             return str(e)
 
+    def ensure_rg(self) -> bool:
+        if shutil.which("rg"):
+            return True
+
+        system = platform.system()
+
+        if system == "Linux":
+            command = ["sudo", "apt", "install", "-y", "ripgrep"]
+
+        elif system == "Darwin":
+            command = ["brew", "install", "ripgrep"]
+
+        elif system == "Windows":
+            command = ["winget", "install", "--id", "BurntSushi.ripgrep.MSVC"]
+
+        else:
+            return False
+
+        print("ripgrep is required for file search.")
+        print(f"Install command: {' '.join(command)}")
+
+        answer = input("Install it? [y/N] ")
+
+        if answer.lower() != "y":
+            return False
+
+        result = subprocess.run(command)
+
+        return result.returncode == 0
+
+    def search_in_files(
+        self,
+        pattern: str,
+        path: str = ".",
+        before_context: int = 0,
+        after_context: int = 0,
+        multiline: bool = False,
+    ) -> str:
+        if not self.ensure_rg():
+            return "ripgrep is not installed."
+
+        try:
+            path = self._resolve_safe_path(path)
+            
+            command = ["rg", "-n"]
+
+            if before_context > 0:
+                command.extend(["-B", str(before_context)])
+
+            if after_context > 0:
+                command.extend(["-A", str(after_context)])
+
+            if multiline:
+                command.append("-U")
+
+            command.extend(["--", pattern, path])
+
+            result = subprocess.run(command, capture_output=True, text=True)
+
+            if result.returncode == 1:
+                return "No matches found."
+
+            if result.returncode != 0:
+                return f"ripgrep error:\n{result.stderr}"
+
+            return result.stdout
+
+        except Exception as e:
+            return str(e)
+
+
 if __name__ == "__main__":
     tools = WorkspaceTools()
-    print(tools.read_file("./.env", 1, 2))
-    print(tools.list_files(recursive=False))
-    print(tools.list_files(recursive=True))
-    print(tools.list_directories(recursive=False))
-    print(tools.list_directories(recursive=True))
+    # print(tools.read_file("./.env", 1, 2))
+    # print(tools.list_files(recursive=False))
+    # print(tools.list_files(recursive=True))
+    # print(tools.list_directories(recursive=False))
+    # print(tools.list_directories(recursive=True))
+    print(tools.search_in_files(pattern=r"^\s*import\s+.+$", path="./", before_context=2, after_context=2))
