@@ -100,6 +100,15 @@ class WorkspaceTools:
         except Exception as e:
             return str(e)
     
+    def list_files_and_directories(self, path: str = ".", recursive: bool = False) -> dict[str, list[str]]:
+        try:
+            files = self.list_files(path, recursive)
+            directories = self.list_directories(path, recursive)
+
+            return {"files": files, "directories": directories}
+
+        except Exception as e:
+            return str(e)
 
 if __name__ == "__main__":
     tools = WorkspaceTools()
