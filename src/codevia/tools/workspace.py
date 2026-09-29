@@ -375,6 +375,21 @@ class WorkspaceTools:
         except Exception as e:
             return str(e)
 
+    def get_multiple_files_outline(
+        self,
+        file_paths: list[str]
+    ) -> dict[str, str | list[str]]:
+        try:
+            outline = {}
+
+            for file_path in file_paths:
+                outline[file_path] = self.get_file_outline(file_path)
+            
+            return outline
+
+        except Exception as e:
+            return str(e)
+
     def ensure_rg(self) -> bool:
         if shutil.which("rg"):
             return True
