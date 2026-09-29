@@ -123,6 +123,28 @@ class WorkspaceTools:
         except Exception as e:
             return str(e)
 
+    def find_files(self, pattern: str, path: str = ".") -> str:
+        if not self.ensure_rg():
+            return "ripgrep is not installed."
+
+        try:
+            path_obj = self._resolve_safe_path(path)
+            
+            command = ["rg", "--files", "-g", pattern, str(path_obj)]
+
+            result = subprocess.run(command, capture_output=True, text=True)
+
+            if result.returncode == 1:
+                return "No files found matching the pattern."
+
+            if result.returncode != 0:
+                return f"ripgrep error:\n{result.stderr}"
+
+            return result.stdout
+
+        except Exception as e:
+            return str(e)
+
     def ensure_rg(self) -> bool:
         if shutil.which("rg"):
             return True
@@ -219,4 +241,4 @@ if __name__ == "__main__":
     # print(tools.list_files(recursive=True))
     # print(tools.list_directories(recursive=False))
     # print(tools.list_directories(recursive=True))
-    print(tools.search_in_files(pattern=r"^\s*import\s+.+$", path="./", before_context=2, after_context=2))
+    # print(tools.search_in_files(pattern=r"^\s*import\s+.+$", path="./", before_context=2, after_context=2))
