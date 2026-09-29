@@ -188,7 +188,8 @@ class WorkspaceTools:
                 if node.type == "class_definition":
                     name_node = node.child_by_field_name("name")
                     name = code[name_node.start_byte:name_node.end_byte] if name_node else "Anonymous"
-                    outline.append("  " * depth + f"class {name}")
+                    line_no = node.start_point[0] + 1
+                    outline.append("  " * depth + f"[{line_no}] class {name}")
                     depth += 1
                 elif node.type == "function_definition":
                     name_node = node.child_by_field_name("name")
@@ -200,7 +201,8 @@ class WorkspaceTools:
                     return_type_node = node.child_by_field_name("return_type")
                     return_type = code[return_type_node.start_byte:return_type_node.end_byte] if return_type_node else ""
 
-                    outline.append("  " * depth + f"def {name}{parameters} -> {return_type}")
+                    line_no = node.start_point[0] + 1
+                    outline.append("  " * depth + f"[{line_no}] def {name}{parameters} -> {return_type}")
                     depth += 1
                 
                 for child in node.children:
@@ -220,7 +222,8 @@ class WorkspaceTools:
                 if node.type == "class_declaration":
                     name_node = node.child_by_field_name("name")
                     name = code[name_node.start_byte:name_node.end_byte] if name_node else "Anonymous"
-                    outline.append("  " * depth + f"class {name}")
+                    line_no = node.start_point[0] + 1
+                    outline.append("  " * depth + f"[{line_no}] class {name}")
                     depth += 1
                 elif node.type in ["function_declaration", "method_definition"]:
                     name_node = node.child_by_field_name("name")
@@ -229,7 +232,8 @@ class WorkspaceTools:
                     parameters_node = node.child_by_field_name("parameters")
                     parameters = code[parameters_node.start_byte:parameters_node.end_byte] if parameters_node else "()"
 
-                    outline.append("  " * depth + f"def {name}{parameters}")
+                    line_no = node.start_point[0] + 1
+                    outline.append("  " * depth + f"[{line_no}] def {name}{parameters}")
                     depth += 1
                 
                 for child in node.children:
@@ -252,7 +256,8 @@ class WorkspaceTools:
                 if node.type == "class_declaration":
                     name_node = node.child_by_field_name("name")
                     name = code[name_node.start_byte:name_node.end_byte] if name_node else "Anonymous"
-                    outline.append("  " * depth + f"class {name}")
+                    line_no = node.start_point[0] + 1
+                    outline.append("  " * depth + f"[{line_no}] class {name}")
                     depth += 1
                 elif node.type in ["function_declaration", "method_definition"]:
                     name_node = node.child_by_field_name("name")
@@ -264,7 +269,8 @@ class WorkspaceTools:
                     return_type_node = node.child_by_field_name("return_type")
                     return_type = code[return_type_node.start_byte:return_type_node.end_byte] if return_type_node else ""
 
-                    outline.append("  " * depth + f"def {name}{parameters} -> {return_type}")
+                    line_no = node.start_point[0] + 1
+                    outline.append("  " * depth + f"[{line_no}] def {name}{parameters} -> {return_type}")
                     depth += 1
                 
                 for child in node.children:
@@ -284,7 +290,8 @@ class WorkspaceTools:
                 if node.type == "class_declaration":
                     name_node = node.child_by_field_name("name")
                     name = code[name_node.start_byte:name_node.end_byte] if name_node else "Anonymous"
-                    outline.append("  " * depth + f"class {name}")
+                    line_no = node.start_point[0] + 1
+                    outline.append("  " * depth + f"[{line_no}] class {name}")
                     depth += 1
                 elif node.type in ["function_declaration", "method_definition"]:
                     name_node = node.child_by_field_name("name")
@@ -296,7 +303,8 @@ class WorkspaceTools:
                     return_type_node = node.child_by_field_name("return_type")
                     return_type = code[return_type_node.start_byte:return_type_node.end_byte] if return_type_node else ""
 
-                    outline.append("  " * depth + f"def {name}{parameters} -> {return_type}")
+                    line_no = node.start_point[0] + 1
+                    outline.append("  " * depth + f"[{line_no}] def {name}{parameters} -> {return_type}")
                     depth += 1
                 
                 for child in node.children:
@@ -320,7 +328,8 @@ class WorkspaceTools:
                         
                     name = code[name_node.start_byte:name_node.end_byte] if name_node else "Anonymous"
                     type_name = "impl" if node.type == "impl_item" else ("struct" if node.type == "struct_item" else "trait")
-                    outline.append("  " * depth + f"{type_name} {name}")
+                    line_no = node.start_point[0] + 1
+                    outline.append("  " * depth + f"[{line_no}] {type_name} {name}")
                     depth += 1
                 elif node.type == "function_item":
                     name_node = node.child_by_field_name("name")
@@ -332,7 +341,8 @@ class WorkspaceTools:
                     return_type_node = node.child_by_field_name("return_type")
                     return_type = code[return_type_node.start_byte:return_type_node.end_byte] if return_type_node else ""
 
-                    outline.append("  " * depth + f"def {name}{parameters} -> {return_type}")
+                    line_no = node.start_point[0] + 1
+                    outline.append("  " * depth + f"[{line_no}] def {name}{parameters} -> {return_type}")
                     depth += 1
                 
                 for child in node.children:
