@@ -145,6 +145,21 @@ class WorkspaceTools:
         except Exception as e:
             return str(e)
 
+    def get_file_info(self, file_path: str) -> dict | str:
+        try:
+            path_obj = self._resolve_safe_path(file_path)
+            stats = path_obj.stat()
+            return {
+                "name": path_obj.name,
+                "size_bytes": stats.st_size,
+                "created_time": stats.st_ctime,
+                "modified_time": stats.st_mtime,
+                "is_file": path_obj.is_file(),
+                "is_dir": path_obj.is_dir()
+            }
+        except Exception as e:
+            return str(e)
+
     def ensure_rg(self) -> bool:
         if shutil.which("rg"):
             return True
