@@ -53,6 +53,16 @@ class WorkspaceTools:
         except Exception as e:
             return str(e)
 
+    def read_multiple_files(self, file_paths: list[str], start: int | None = None, end: int | None = None) -> dict[str, str]:
+        results = {}
+        for file_path in file_paths:
+            results[file_path] = self.read_file(
+                file_path=file_path,
+                start=start,
+                end=end
+            )
+        return results
+
     def list_files(self, path: str = ".", recursive: bool = False) -> list[str] | str:
         try:
             directory = self._resolve_safe_path(path)
