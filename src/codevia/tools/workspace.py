@@ -183,6 +183,24 @@ class WorkspaceTools:
         except Exception as e:
             return str(e)
 
+    def search_multiple_patterns(
+        self,
+        patterns: list[str],
+        path: str = ".",
+        before_context: int = 0,
+        after_context: int = 0,
+        multiline: bool = False,
+    ) -> dict[str, str]:
+        results = {}
+        for pattern in patterns:
+            results[pattern] = self.search_in_files(
+                pattern=pattern,
+                path=path,
+                before_context=before_context,
+                after_context=after_context,
+                multiline=multiline
+            )
+        return results
 
 if __name__ == "__main__":
     tools = WorkspaceTools()
