@@ -1,0 +1,256 @@
+[
+    {
+        "type": "function",
+        "name": "read_file",
+        "description": "Reads the contents of a file. Optionally, can read a specific range of lines.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "Path to the file to read."
+                },
+                "start": {
+                    "type": "integer",
+                    "description": "The starting line number (1-indexed). Optional."
+                },
+                "end": {
+                    "type": "integer",
+                    "description": "The ending line number (inclusive). Optional."
+                }
+            },
+            "required": [
+                "file_path"
+            ]
+        }
+    },
+    {
+        "type": "function",
+        "name": "read_multiple_files",
+        "description": "Reads the contents of multiple files. Optionally, can read a specific range of lines for all files.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "file_paths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of paths to the files to read."
+                },
+                "start": {
+                    "type": "integer",
+                    "description": "The starting line number (1-indexed). Optional."
+                },
+                "end": {
+                    "type": "integer",
+                    "description": "The ending line number (inclusive). Optional."
+                }
+            },
+            "required": [
+                "file_paths"
+            ]
+        }
+    },
+    {
+        "type": "function",
+        "name": "list_files",
+        "description": "Lists all files in a specified path.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "The directory path to list files from. Defaults to '.'."
+                },
+                "recursive": {
+                    "type": "boolean",
+                    "description": "Whether to list files recursively. Defaults to False."
+                }
+            },
+            "required": []
+        }
+    },
+    {
+        "type": "function",
+        "name": "list_directories",
+        "description": "Lists all directories in a specified path.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "The directory path to list directories from. Defaults to '.'."
+                },
+                "recursive": {
+                    "type": "boolean",
+                    "description": "Whether to list directories recursively. Defaults to False."
+                }
+            },
+            "required": []
+        }
+    },
+    {
+        "type": "function",
+        "name": "list_files_and_directories",
+        "description": "Lists all files and directories in a specified path.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "The directory path to list files and directories from. Defaults to '.'."
+                },
+                "recursive": {
+                    "type": "boolean",
+                    "description": "Whether to list recursively. Defaults to False."
+                }
+            },
+            "required": []
+        }
+    },
+    {
+        "type": "function",
+        "name": "find_files",
+        "description": "Finds files matching a glob pattern in a specified path.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "The glob pattern to search for (e.g., '*.py')."
+                },
+                "path": {
+                    "type": "string",
+                    "description": "The directory path to search in. Defaults to '.'."
+                }
+            },
+            "required": [
+                "pattern"
+            ]
+        }
+    },
+    {
+        "type": "function",
+        "name": "get_file_info",
+        "description": "Gets metadata information about a file, such as size, created time, and modified time.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "Path to the file to get information about."
+                }
+            },
+            "required": [
+                "file_path"
+            ]
+        }
+    },
+    {
+        "type": "function",
+        "name": "get_file_outline",
+        "description": "Gets an outline of classes and functions for a specified file.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "Path to the file to outline."
+                }
+            },
+            "required": [
+                "file_path"
+            ]
+        }
+    },
+    {
+        "type": "function",
+        "name": "get_multiple_files_outline",
+        "description": "Gets an outline of classes and functions for multiple files.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "file_paths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of paths to the files to outline."
+                }
+            },
+            "required": [
+                "file_paths"
+            ]
+        }
+    },
+    {
+        "type": "function",
+        "name": "search_in_files",
+        "description": "Searches for a text pattern inside files using ripgrep.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "The regex or text pattern to search for."
+                },
+                "path": {
+                    "type": "string",
+                    "description": "The file or directory path to search in. Defaults to '.'."
+                },
+                "before_context": {
+                    "type": "integer",
+                    "description": "Number of lines of before-context to show. Defaults to 0."
+                },
+                "after_context": {
+                    "type": "integer",
+                    "description": "Number of lines of after-context to show. Defaults to 0."
+                },
+                "multiline": {
+                    "type": "boolean",
+                    "description": "Whether to enable multiline matching. Defaults to False."
+                }
+            },
+            "required": [
+                "pattern"
+            ]
+        }
+    },
+    {
+        "type": "function",
+        "name": "search_multiple_patterns",
+        "description": "Searches for multiple text patterns inside files using ripgrep.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "patterns": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of regex or text patterns to search for."
+                },
+                "path": {
+                    "type": "string",
+                    "description": "The file or directory path to search in. Defaults to '.'."
+                },
+                "before_context": {
+                    "type": "integer",
+                    "description": "Number of lines of before-context to show. Defaults to 0."
+                },
+                "after_context": {
+                    "type": "integer",
+                    "description": "Number of lines of after-context to show. Defaults to 0."
+                },
+                "multiline": {
+                    "type": "boolean",
+                    "description": "Whether to enable multiline matching. Defaults to False."
+                }
+            },
+            "required": [
+                "patterns"
+            ]
+        }
+    }
+]
