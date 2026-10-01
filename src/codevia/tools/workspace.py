@@ -132,7 +132,10 @@ class WorkspaceTools:
         try:
             path_obj = self._resolve_safe_path(path)
             
-            command = ["rg", "--files", "-g", pattern, str(path_obj)]
+            command = ["rg", "--files", "-g", pattern]
+            for d in self.excluded_dirs:
+                command.extend(["-g", f"!{d}"])
+            command.append(str(path_obj))
 
             result = subprocess.run(command, capture_output=True, text=True)
 
@@ -435,6 +438,8 @@ class WorkspaceTools:
             path = self._resolve_safe_path(path)
             
             command = ["rg", "-n"]
+            for d in self.excluded_dirs:
+                command.extend(["-g", f"!{d}"])
 
             if before_context > 0:
                 command.extend(["-B", str(before_context)])
