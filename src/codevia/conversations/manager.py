@@ -19,10 +19,8 @@ class Conversations:
         self.redis_base_key = "conversations"
 
     def create_conversation(self):
-        conversation_id = uuid4()
+        conversation_id = str(uuid4())
         redis_key = f"{self.redis_base_key}:{conversation_id}"
-
-        self.redisClient.set(redis_key, "initialized")
 
         return conversation_id
 
