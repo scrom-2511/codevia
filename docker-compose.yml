@@ -1,9 +1,6 @@
 services:
-  pinecone:
-    image: ghcr.io/pinecone-io/pinecone-local:latest
-    environment:
-      PORT: 5080
-      PINECONE_HOST: localhost
+  redis:
+    image: redis/redis:latest
+    container_name: redis
     ports:
-      - "5080-5090:5080-5090"
-    platform: linux/amd64
+      - "6379:6379"
