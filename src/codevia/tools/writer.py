@@ -14,3 +14,10 @@ class Writer:
             return f"Successfully wrote to {file_path}"
         except Exception as e:
             return f"Error writing file: {str(e)}"
+
+    def write_multiple_files(self, files: Dict[str, str]) -> Dict[str, str]:
+        results = {}
+
+        for file_path, content in files.items():
+            results[file_path] = self.write_file(file_path, content)
+        return results
