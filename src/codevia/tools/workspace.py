@@ -2,6 +2,7 @@ from codevia.tools.file_system import FileSystem
 from codevia.tools.reader import Reader
 from codevia.tools.discovery import Discovery
 from codevia.tools.code_intelligence import CodeIntelligence
+from codevia.tools.writer import Writer
 
 class WorkspaceTools:
     def __init__(self):
@@ -9,6 +10,7 @@ class WorkspaceTools:
         self.reader = Reader(self.fs)
         self.discovery = Discovery(self.fs)
         self.code = CodeIntelligence(self.fs)
+        self.writer = Writer(self.fs)
 
     # Reader
     def read_file(self, *args, **kwargs):
@@ -45,6 +47,26 @@ class WorkspaceTools:
 
     def get_multiple_files_outline(self, *args, **kwargs):
         return self.code.get_multiple_files_outline(*args, **kwargs)
+
+    # Writer
+    def write_file(self, *args, **kwargs):
+        return self.writer.write_file(*args, **kwargs)
+
+    def append_to_file(self, *args, **kwargs):
+        return self.writer.append_to_file(*args, **kwargs)
+
+    def replace_in_file(self, *args, **kwargs):
+        return self.writer.replace_in_file(*args, **kwargs)
+
+    def write_multiple_files(self, *args, **kwargs):
+        return self.writer.write_multiple_files(*args, **kwargs)
+
+    def replace_in_multiple_files(self, *args, **kwargs):
+        return self.writer.replace_in_multiple_files(*args, **kwargs)
+
+    # File system
+    def create_file(self, *args, **kwargs):
+        return self.fs.create_file(*args, **kwargs)
 
 
 if __name__ == "__main__":
