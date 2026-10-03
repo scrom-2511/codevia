@@ -32,4 +32,20 @@ class Writer:
         except Exception as e:
             return f"Error appending to file: {str(e)}"
 
-    
+    def replace_in_file(self, file_path: str, old_text: str, new_text: str, replace_all: bool = False) -> str:
+        try:
+            path = self.fs.resolve_safe_path(file_path)
+            content = path.read_text(encoding='utf-8')
+            
+            if old_text not in content:
+                raise ValueError(f"Text not found in file: {old_text}")
+
+            if replace_all:
+                content = content.replace(old_text, new_text)
+            else:
+                content = content.replace(old_text, new_text, 1)
+                
+            path.write_text(content, encoding='utf-8')
+            return f"Successfully replaced text in {file_path}"
+        except Exception as e:
+            return f"Error replacing text in file: {str(e)}"
