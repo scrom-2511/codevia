@@ -49,3 +49,10 @@ class Writer:
             return f"Successfully replaced text in {file_path}"
         except Exception as e:
             return f"Error replacing text in file: {str(e)}"
+
+    def replace_in_multiple_files(self, file_paths: list[str], old_text: str, new_text: str, replace_all: bool = False) -> Dict[str, str]:
+        results = {}
+        
+        for file_path in file_paths:
+            results[file_path] = self.replace_in_file(file_path, old_text, new_text, replace_all)
+        return results
