@@ -21,3 +21,15 @@ class Writer:
         for file_path, content in files.items():
             results[file_path] = self.write_file(file_path, content)
         return results
+
+    def append_to_file(self, file_path: str, content: str) -> str:
+        try:
+            path = self.fs.resolve_write_path(file_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open('a', encoding='utf-8') as f:
+                f.write(content)
+            return f"Successfully appended to {file_path}"
+        except Exception as e:
+            return f"Error appending to file: {str(e)}"
+
+    
