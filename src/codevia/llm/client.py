@@ -52,7 +52,7 @@ class LLMClient:
             {query}
         """)
         
-    def generate_response(self, query: str, tools: Optional[list] = None, history: Optional[list] = None, response_schema: dict = None) -> LLMResponse:
+    def generate_response(self, query: str, tools: Optional[list] = None, history: Optional[list] = None, response_schema: dict = None, model: str = "MODEL_LIGHT") -> LLMResponse:
         prompt = self.get_prompt(query, history)
         # client = genai.Client(api_key=self.api_keys_provider.get_api_key())
 
@@ -66,7 +66,7 @@ class LLMClient:
             }
 
         response = self.client.interactions.create(
-            model=os.getenv("GEMINI_MODEL"),
+            model=os.getenv(model),
             input=prompt,
             tools=tools,
             response_format=response_format,
@@ -78,12 +78,12 @@ class LLMClient:
             response=response
         )
 
-    def generate_stream_response(self, query: str, context:str):
+    def generate_stream_response(self, query: str, context:str, model: str = "MODEL_LIGHT"):
         prompt = self.get_prompt(query, context)
         # client = genai.Client(api_key=self.api_keys_provider.get_api_key())
 
         stream = self.client.interactions.create(
-            model=os.getenv("GEMINI_MODEL"),
+            model=os.getenv(model),
             input=prompt,
             stream=True
         )
