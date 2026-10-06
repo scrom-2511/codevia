@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, Any
+from dataclasses import dataclass
 from codevia.key_provider.api_key_provider import ApiKeyProvider
 from google import genai
 from dotenv import load_dotenv
@@ -6,6 +7,12 @@ import os
 import inspect
 
 load_dotenv()
+
+@dataclass
+class LLMResponse:
+    output_text: str
+    previous_interaction_id: Optional[str]
+    response: Any
 
 class LLMClient:
     def __init__(self, api_keys_provider: ApiKeyProvider):
@@ -45,17 +52,31 @@ class LLMClient:
             {query}
         """)
         
-    def generate_response(self, query: str, tools: Optional[list] = None, history: Optional[list] = None) -> dict:
+    def generate_response(self, query: str, tools: Optional[list] = None, history: Optional[list] = None, response_schema: dict = None) -> LLMResponse:
         prompt = self.get_prompt(query, history)
         # client = genai.Client(api_key=self.api_keys_provider.get_api_key())
+
+        response_format = None
+
+        if response_schema is not None:
+            response_format = {
+                "type": "text",
+                "mime_type": "application/json",
+                "schema": response_schema,
+            }
 
         response = self.client.interactions.create(
             model=os.getenv("GEMINI_MODEL"),
             input=prompt,
-            tools=tools
+            tools=tools,
+            response_format=response_format,
         )
         
-        return {"output_text": response.output_text, "previous_interaction_id": response.previous_interaction_id, "response": response}
+        return LLMResponse(
+            output_text=response.output_text, 
+            previous_interaction_id=response.previous_interaction_id, 
+            response=response
+        )
 
     def generate_stream_response(self, query: str, context:str):
         prompt = self.get_prompt(query, context)
