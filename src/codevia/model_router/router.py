@@ -1,5 +1,14 @@
 from pydantic import BaseModel, Field
+from enum import Enum
 from codevia.llm.client import LLMClient
+from enum import Enum
+
+class ModelType(str, Enum):
+    LIGHT = "MODEL_LIGHT"
+    STANDARD = "MODEL_STANDARD"
+    CAPABLE = "MODEL_CAPABLE"
+    ADVANCED = "MODEL_ADVANCED"
+    FRONTIER = "MODEL_FRONTIER"
 
 class TaskScores(BaseModel):
     complexity: int = Field(ge=1, le=10, description="Complexity score (1-10)")
@@ -108,3 +117,34 @@ class ModelRouter:
         )
         
         return TaskScores.model_validate_json(response.output_text)
+
+    def route_task(self, user_task: str) -> ModelType:
+        scores = self.get_scores(user_task)
+
+        if scores.risk >= 8:
+            return ModelType.FRONTIER
+
+        if scores.tool_usage >= 8:
+            return ModelType.ADVANCED
+
+        routing_score = (
+            0.30 * scores.complexity
+            + 0.30 * scores.reasoning
+            + 0.20 * scores.coding
+            + 0.10 * scores.context
+            + 0.10 * scores.tool_usage
+        )
+
+        if routing_score <= 2:
+            return ModelType.LIGHT
+
+        if routing_score <= 4:
+            return ModelType.STANDARD
+
+        if routing_score <= 6:
+            return ModelType.CAPABLE
+
+        if routing_score <= 8:
+            return ModelType.ADVANCED
+
+        return ModelType.FRONTIER
