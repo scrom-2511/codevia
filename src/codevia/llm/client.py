@@ -78,17 +78,26 @@ class LLMClient:
             response=response
         )
 
-    def generate_stream_response(self, query: str, context:str, model: str = "MODEL_LIGHT"):
-        prompt = self.get_prompt(query, context)
+    def generate_stream_response(self, query: str, tools: Optional[list] = None, history: Optional[list] = None, response_schema: dict = None, model: str = "MODEL_LIGHT"):
+        prompt = self.get_prompt(query, history)
         # client = genai.Client(api_key=self.api_keys_provider.get_api_key())
+
+        response_format = None
+
+        if response_schema is not None:
+            response_format = {
+                "type": "text",
+                "mime_type": "application/json",
+                "schema": response_schema,
+            }
 
         stream = self.client.interactions.create(
             model=os.getenv(model),
             input=prompt,
+            tools=tools,
+            response_format=response_format,
             stream=True
         )
         
         for event in stream:
-            if event.event_type == "step.delta":
-                if event.delta.type == "text":
-                    print(event.delta.text, end="") # Use yield if another a frontend stream senders calls it
+            yield event
