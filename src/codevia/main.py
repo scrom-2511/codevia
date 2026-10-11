@@ -28,7 +28,7 @@ def main():
         if func_name and hasattr(workspace_tools, func_name):
             tool_map[func_name] = getattr(workspace_tools, func_name)
 
-    print(tool_map)
+    # print(tool_map)
 
     print("Codevia LLM Agent. Type 'exit' to quit.")
 
@@ -41,66 +41,95 @@ def main():
             conversation.add_message(conversation_id, {"role": "user", "content": user_input})
             
             selected_model = model_router.route_task(user_input).value
-            print(f"Routed task to: {selected_model}")
+            # print(f"Routed task to: {selected_model}")
             
-            res = llm.generate_response(
+            res = llm.generate_stream_response(
                 query=user_input,
                 tools=tools_list,
                 history=conversation.get_history(conversation_id),
                 model=selected_model
             )
-            interaction = res.response
             
             while True:
                 function_called = False
                 function_calls_made = []
                 function_responses = []
+                accumulated_text = ""
+                current_call = None
+                accumulated_args_str = ""
 
-                for step in interaction.steps:
-                    if step.type == "function_call":
-                        function_called = True
-                        function_calls_made.append({"name": step.name, "arguments": step.arguments})
-                        # print(f"Function to call: {step.name}")
-                        # print(f"Arguments: {step.arguments}")
-                        
-                        func = tool_map.get(step.name)
-                        if func:
+                for event in res:
+                    if event.event_type == "step.start":
+                        step = event.step
+                        if step.type == "function_call":
+                            current_call = {
+                                "id": step.id or None,
+                                "name": step.name
+                            }
+                            accumulated_args_str = ""
+
+                    elif event.event_type == "step.delta":
+                        if event.delta.type == "text":
+                            accumulated_text += event.delta.text
+                            print(event.delta.text, end="", flush=True)
+                        elif event.delta.type == "arguments_delta":
+                            accumulated_args_str += event.delta.arguments or ""
+
+                    elif event.event_type == "step.stop":
+                        if current_call:
+                            function_called = True
                             try:
-                                result = func(**step.arguments)
-                            except Exception as e:
-                                result = str(e)
-                            # print(f"Function result: {result}")
-                            
-                            function_responses.append({
-                                "name": step.name,
-                                "response": {"result": result}
-                            })
-                        else:
-                            # print(f"Tool {step.name} not found.")
-                            function_responses.append({
-                                "name": step.name,
-                                "response": {"error": "Tool not found"}
-                            })
-                
+                                args = json.loads(accumulated_args_str) if accumulated_args_str else {}
+                            except json.JSONDecodeError:
+                                args = {}
+
+                            function_calls_made.append({"name": current_call["name"], "arguments": args})
+
+                            func = tool_map.get(current_call["name"])
+                            if func:
+                                try:
+                                    result = func(**args)
+                                    print(result)
+                                except Exception as e:
+                                    result = str(e)
+                                
+                                function_responses.append({
+                                    "name": current_call["name"],
+                                    "response": {"result": result}
+                                })
+                            else:
+                                function_responses.append({
+                                    "name": current_call["name"],
+                                    "response": {"error": "Tool not found"}
+                                })
+
+                            current_call = None
+                            accumulated_args_str = ""
+
                 if function_called:
+                    print("\nfunction is called")
+                    if accumulated_text:
+                        conversation.add_message(conversation_id, {"role": "model", "content": accumulated_text})
+
                     call_msg = f"Model called functions: {json.dumps(function_calls_made)}"
                     conversation.add_message(conversation_id, {"role": "model", "content": call_msg})
 
                     tool_msg = f"Tool execution results: {json.dumps(function_responses)}"
                     conversation.add_message(conversation_id, {"role": "user", "content": tool_msg})
-                    print("model used:", selected_model)
                     
-                    res = llm.generate_response(
+                    res = llm.generate_stream_response(
                         query="Please continue based on the tool results.",
                         tools=tools_list,
                         history=conversation.get_history(conversation_id),
                         model=selected_model
                     )
-                    interaction = res.response
+                    continue
                 else:
-                    print(f"\nLLM: {interaction.output_text}")
-                    conversation.add_message(conversation_id, {"role": "model", "content": interaction.output_text})
+                    if accumulated_text:
+                        conversation.add_message(conversation_id, {"role": "model", "content": accumulated_text})
+                    print("\nModel finished execution.")
                     break
+                        
 
         except KeyboardInterrupt:
             break
