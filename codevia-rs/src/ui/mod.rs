@@ -1,2 +1,2 @@
-pub mod header;
+pub mod components;
 pub mod styles;
