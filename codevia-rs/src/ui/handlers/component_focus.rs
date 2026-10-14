@@ -1,5 +1,8 @@
+use strum::IntoEnumIterator;
+
 use crate::ui::Component;
 
+#[derive(Clone)]
 pub struct ComponentFocus {
     focus: Component,
     components: Vec<Component>,
@@ -8,7 +11,7 @@ pub struct ComponentFocus {
 
 impl ComponentFocus {
     pub fn new() -> Self {
-        let components = vec![Component::Conversations, Component::Input];
+        let components: Vec<Component> = Component::iter().collect();
         let current_component_index = 0;
         let focus = components[current_component_index];
 

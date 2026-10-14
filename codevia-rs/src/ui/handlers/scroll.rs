@@ -16,7 +16,7 @@ impl Scroll {
 
         Self {
             components,
-            component_focus: component_focus,
+            component_focus,
         }
     }
 
