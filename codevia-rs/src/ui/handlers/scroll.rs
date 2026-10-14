@@ -19,4 +19,32 @@ impl Scroll {
             component_focus: component_focus,
         }
     }
+
+    pub fn increment_offset(&mut self) -> () {
+        let current_focused_component = self.component_focus.get_current_focused_component();
+
+        let current_focused_component_scroll_offset =
+            self.components.get(&current_focused_component).unwrap();
+
+        if current_focused_component.is_scrollable() {
+            self.components.insert(
+                current_focused_component,
+                current_focused_component_scroll_offset + 1,
+            );
+        }
+    }
+
+    pub fn decrement_offset(&mut self) -> () {
+        let current_focused_component = self.component_focus.get_current_focused_component();
+
+        let current_focused_component_scroll_offset =
+            self.components.get(&current_focused_component).unwrap();
+
+        if current_focused_component.is_scrollable() {
+            self.components.insert(
+                current_focused_component,
+                current_focused_component_scroll_offset - 1,
+            );
+        }
+    }
 }
