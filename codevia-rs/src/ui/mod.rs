@@ -12,3 +12,17 @@ pub enum Component {
     Conversations,
     Input,
 }
+
+impl Component {
+    pub fn component(&self) -> ComponentConfig {
+        match self {
+            Self::Header => ComponentConfig { scrollable: false },
+            Self::Conversations => ComponentConfig { scrollable: true },
+            Self::Input => ComponentConfig { scrollable: true },
+        }
+    }
+
+    pub fn is_scrollable(&self) -> bool {
+        self.component().scrollable
+    }
+}
