@@ -2,6 +2,7 @@ use crate::core::ErrorKind;
 
 mod file_system;
 mod reader;
+mod writer;
 
 #[derive(Debug, thiserror::Error)]
 pub enum WorkspaceErrors {
