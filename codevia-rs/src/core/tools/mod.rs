@@ -1,5 +1,6 @@
 use crate::core::ErrorKind;
 
+mod discovery;
 mod file_system;
 mod reader;
 mod writer;
