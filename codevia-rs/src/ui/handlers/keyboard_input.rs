@@ -1,10 +1,10 @@
 use std::io::Error;
 
-use crossterm::event::{Event, KeyCode, read};
+use crossterm::event::{Event, KeyCode, KeyModifiers, read};
 
 use crate::State;
 
-pub fn keyboard_input_handler(state: &mut State) -> Result<(), Error> {
+pub fn keyboard_input_handler(state: &mut State) -> Result<bool, Error> {
     if let Event::Key(key_event) = read()? {
         match key_event.code {
             KeyCode::Up => {
@@ -16,9 +16,12 @@ pub fn keyboard_input_handler(state: &mut State) -> Result<(), Error> {
             KeyCode::BackTab => {
                 state.component_focus.change_focus();
             }
+            KeyCode::Char('c') if key_event.modifiers.contains(KeyModifiers::CONTROL) => {
+                return Ok(false);
+            }
             _ => {}
         }
     }
 
-    Ok(())
+    Ok(true)
 }
