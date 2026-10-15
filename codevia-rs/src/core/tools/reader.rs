@@ -3,7 +3,8 @@ use std::fmt::Write as FmtWrite;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-use crate::core::WorkspaceErrors;
+use crate::core::ErrorKind;
+use crate::core::tools::WorkspaceErrors;
 use crate::core::tools::file_system::FileSystem;
 
 pub struct Reader {
@@ -28,29 +29,27 @@ impl Reader {
         start: Option<usize>,
         end: Option<usize>,
     ) -> Result<String, WorkspaceErrors> {
-        let safe_path = self
-            .fs
-            .resolve_safe_path(file_path)
-            .map_err(|e| e.to_string())?;
+        let safe_path = self.fs.resolve_safe_path(file_path)?;
 
-        let file = File::open(&safe_path).map_err(|e| e.to_string())?;
+        let file = File::open(&safe_path)?;
         let reader = BufReader::new(file);
 
-        let lines: Vec<String> = reader
-            .lines()
-            .collect::<Result<_, _>>()
-            .map_err(|e| e.to_string())?;
+        let lines: Vec<String> = reader.lines().collect::<Result<_, _>>()?;
 
         let start_idx = start.unwrap_or(1);
         let end_idx = end.unwrap_or(lines.len());
 
         if start_idx < 1 {
-            return Err(WorkspaceErrors::Arguments("start must be >= 1".to_string()));
+            return Err(WorkspaceErrors::new(
+                "start must be >= 1",
+                ErrorKind::Arguments,
+            ));
         }
 
         if end_idx < start_idx {
-            return Err(WorkspaceErrors::Arguments(
-                "end must be >= start".to_string(),
+            return Err(WorkspaceErrors::new(
+                "end must be >= start",
+                ErrorKind::Arguments,
             ));
         }
 

@@ -4,7 +4,8 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
-use crate::core::WorkspaceErrors;
+use crate::core::ErrorKind;
+use crate::core::tools::WorkspaceErrors;
 
 pub struct FileSystem {
     cwd: PathBuf,
@@ -65,14 +66,14 @@ impl FileSystem {
         println!("normalized: {}", normalized.display());
 
         if !normalized.exists() {
-            return Err(WorkspaceErrors::NotFound(path.to_string()));
+            return Err(WorkspaceErrors::new(path.to_string(), ErrorKind::NotFound));
         }
 
         let canonical = normalized.canonicalize()?;
         println!("canonical: {}", canonical.display());
 
         if !canonical.starts_with(&self.cwd) {
-            return Err(WorkspaceErrors::AccessDenied(path.to_string()));
+            return Err(WorkspaceErrors::new(path, ErrorKind::AccessDenied));
         }
 
         Ok(canonical)
@@ -82,7 +83,7 @@ impl FileSystem {
         let normalized = self.normalize_path(path);
 
         if !normalized.starts_with(&self.cwd) {
-            return Err(WorkspaceErrors::AccessDenied(path.to_string()));
+            return Err(WorkspaceErrors::new(path, ErrorKind::AccessDenied));
         }
 
         let mut ancestor = normalized.as_path();
@@ -97,7 +98,7 @@ impl FileSystem {
         if ancestor.exists() {
             let canonical_ancestor = ancestor.canonicalize()?;
             if !canonical_ancestor.starts_with(&self.cwd) {
-                return Err(WorkspaceErrors::AccessDenied(path.to_string()));
+                return Err(WorkspaceErrors::new(path, ErrorKind::AccessDenied));
             }
         }
 
@@ -115,7 +116,10 @@ impl FileSystem {
         let path = self.resolve_write_path(file_path)?;
 
         if path.exists() {
-            return Err(WorkspaceErrors::AlreadyExists(file_path.to_string()));
+            return Err(WorkspaceErrors::new(
+                path.display().to_string(),
+                ErrorKind::AlreadyExists,
+            ));
         }
 
         if let Some(parent) = path.parent() {
