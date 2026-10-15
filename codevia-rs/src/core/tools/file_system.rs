@@ -4,17 +4,7 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
-#[derive(Debug, thiserror::Error)]
-pub enum FsError {
-    #[error("Access denied: '{0}' is outside the workspace.")]
-    AccessDenied(String),
-    #[error("Path not found: '{0}'")]
-    NotFound(String),
-    #[error("File already exists: '{0}'")]
-    AlreadyExists(String),
-    #[error("I/O error: {0}")]
-    Io(#[from] std::io::Error),
-}
+use crate::core::WorkspaceErrors;
 
 pub struct FileSystem {
     cwd: PathBuf,
@@ -70,29 +60,29 @@ impl FileSystem {
         full_path
     }
 
-    pub fn resolve_safe_path(&self, path: &str) -> Result<PathBuf, FsError> {
+    pub fn resolve_safe_path(&self, path: &str) -> Result<PathBuf, WorkspaceErrors> {
         let normalized = self.normalize_path(path);
         println!("normalized: {}", normalized.display());
 
         if !normalized.exists() {
-            return Err(FsError::NotFound(path.to_string()));
+            return Err(WorkspaceErrors::NotFound(path.to_string()));
         }
 
         let canonical = normalized.canonicalize()?;
         println!("canonical: {}", canonical.display());
 
         if !canonical.starts_with(&self.cwd) {
-            return Err(FsError::AccessDenied(path.to_string()));
+            return Err(WorkspaceErrors::AccessDenied(path.to_string()));
         }
 
         Ok(canonical)
     }
 
-    pub fn resolve_write_path(&self, path: &str) -> Result<PathBuf, FsError> {
+    pub fn resolve_write_path(&self, path: &str) -> Result<PathBuf, WorkspaceErrors> {
         let normalized = self.normalize_path(path);
 
         if !normalized.starts_with(&self.cwd) {
-            return Err(FsError::AccessDenied(path.to_string()));
+            return Err(WorkspaceErrors::AccessDenied(path.to_string()));
         }
 
         let mut ancestor = normalized.as_path();
@@ -107,7 +97,7 @@ impl FileSystem {
         if ancestor.exists() {
             let canonical_ancestor = ancestor.canonicalize()?;
             if !canonical_ancestor.starts_with(&self.cwd) {
-                return Err(FsError::AccessDenied(path.to_string()));
+                return Err(WorkspaceErrors::AccessDenied(path.to_string()));
             }
         }
 
@@ -121,11 +111,11 @@ impl FileSystem {
         }
     }
 
-    fn try_create_file(&self, file_path: &str) -> Result<String, FsError> {
+    fn try_create_file(&self, file_path: &str) -> Result<String, WorkspaceErrors> {
         let path = self.resolve_write_path(file_path)?;
 
         if path.exists() {
-            return Err(FsError::AlreadyExists(file_path.to_string()));
+            return Err(WorkspaceErrors::AlreadyExists(file_path.to_string()));
         }
 
         if let Some(parent) = path.parent() {

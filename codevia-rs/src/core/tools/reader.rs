@@ -3,6 +3,7 @@ use std::fmt::Write as FmtWrite;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
+use crate::core::WorkspaceErrors;
 use crate::core::tools::file_system::FileSystem;
 
 pub struct Reader {
@@ -17,7 +18,7 @@ impl Reader {
     pub fn read_file(&self, file_path: &str, start: Option<usize>, end: Option<usize>) -> String {
         match self.try_read_file(file_path, start, end) {
             Ok(content) => content,
-            Err(err) => err,
+            Err(err) => err.to_string(),
         }
     }
 
@@ -26,7 +27,7 @@ impl Reader {
         file_path: &str,
         start: Option<usize>,
         end: Option<usize>,
-    ) -> Result<String, String> {
+    ) -> Result<String, WorkspaceErrors> {
         let safe_path = self
             .fs
             .resolve_safe_path(file_path)
@@ -44,11 +45,13 @@ impl Reader {
         let end_idx = end.unwrap_or(lines.len());
 
         if start_idx < 1 {
-            return Err("start must be >= 1".to_string());
+            return Err(WorkspaceErrors::Arguments("start must be >= 1".to_string()));
         }
 
         if end_idx < start_idx {
-            return Err("end must be >= start".to_string());
+            return Err(WorkspaceErrors::Arguments(
+                "end must be >= start".to_string(),
+            ));
         }
 
         let from = (start_idx - 1).min(lines.len());
