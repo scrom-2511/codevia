@@ -50,12 +50,14 @@ impl Rule {
 
 enum CodeLanguage {
     RUST,
+    PYTHON,
 }
 
 impl CodeLanguage {
     pub fn lang(&self) -> Result<Language, WorkspaceErrors> {
         let language = match self {
             CodeLanguage::RUST => tree_sitter_rust::LANGUAGE,
+            CodeLanguage::PYTHON => tree_sitter_python::LANGUAGE,
         }
         .into();
 
@@ -125,6 +127,30 @@ const RUST_RULES: &[Rule] = &[
     Rule {
         body_field: Some("body"),
         ..Rule::new("foreign_mod_item", "extern")
+    },
+];
+
+const PYTHON_RULES: &[Rule] = &[
+    // Functions and methods
+    Rule {
+        header: Header::Body("body"),
+        body_field: Some("body"),
+        fn_sig: Some(FnSig::Fields {
+            params: &["parameters"],
+            ret: &["return_type"],
+        }),
+        ..Rule::new("function_definition", "def")
+    },
+    // Classes
+    Rule {
+        header: Header::Body("body"),
+        body_field: Some("body"),
+        ..Rule::new("class_definition", "class")
+    },
+    // Type aliases
+    Rule {
+        header: Header::WholeNode,
+        ..Rule::new("type_alias_statement", "type")
     },
 ];
 
@@ -231,17 +257,33 @@ fn traverse(node: Node, code: &str, rules: &[Rule], depth: usize) {
 }
 
 #[test]
-fn test_rs() {
-    let language = CodeLanguage::RUST;
+fn test() {
+    let language = CodeLanguage::PYTHON;
 
     let mut parser = Parser::new();
     parser.set_language(&language.lang().unwrap()).unwrap();
 
     let code =
-        read_to_string("/home/scrom/code/codevia/codevia-rs/src/core/tools/test.rs").unwrap();
+        read_to_string("/home/scrom/code/codevia/codevia-rs/src/core/tools/test.py").unwrap();
 
     let tree = parser.parse(&code, None).unwrap();
 
     let root = tree.root_node();
-    traverse(root, &code, RUST_RULES, 0);
+    traverse(root, &code, PYTHON_RULES, 0);
 }
+
+// #[test]
+// fn test2() {
+//     let language = CodeLanguage::RUST;
+
+//     let mut parser = Parser::new();
+//     parser.set_language(&language.lang().unwrap()).unwrap();
+
+//     let code =
+//         read_to_string("/home/scrom/code/codevia/codevia-rs/src/core/tools/test.rs").unwrap();
+
+//     let tree = parser.parse(&code, None).unwrap();
+
+//     let root = tree.root_node();
+//     traverse(root, &code, RUST_RULES, 0);
+// }
