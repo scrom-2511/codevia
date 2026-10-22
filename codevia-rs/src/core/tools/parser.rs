@@ -6,12 +6,14 @@ use crate::core::tools::WorkspaceErrors;
 
 pub enum CodeLanguage {
     RUST,
+    PYTHON,
 }
 
 impl CodeLanguage {
     pub fn lang(&self) -> Result<Language, WorkspaceErrors> {
         let language = match self {
             CodeLanguage::RUST => tree_sitter_rust::LANGUAGE,
+            CodeLanguage::PYTHON => tree_sitter_python::LANGUAGE,
         }
         .into();
 
@@ -42,6 +44,7 @@ impl CodeParser {
         for child in node.children(&mut cursor) {
             let description = match &self.language {
                 CodeLanguage::RUST => RustLanguage::describe_node(child, code),
+                CodeLanguage::PYTHON => PythonLanguage::describe_node(child, code),
             };
 
             if let Some(description) = description {
@@ -123,12 +126,75 @@ impl Describe for RustLanguage {
     }
 }
 
+pub struct PythonLanguage;
+
+impl Describe for PythonLanguage {
+    fn describe_node(node: Node, code: &str) -> Option<String> {
+        const HEADER_NODES: &[&str] = &["class_definition", "function_definition"];
+
+        const FULL_TEXT_NODES: &[&str] = &["type_alias_statement"];
+
+        if node.kind() == "decorated_definition" {
+            let start = node.start_byte();
+
+            let end = if let Some(def) = node.child_by_field_name("definition") {
+                def.start_byte()
+            } else {
+                node.end_byte()
+            };
+
+            Some(code[start..end].trim().to_owned())
+        } else if HEADER_NODES.contains(&node.kind()) {
+            let start = node.start_byte();
+
+            let end = if let Some(body) = node.child_by_field_name("body") {
+                body.start_byte()
+            } else {
+                node.end_byte()
+            };
+
+            Some(code[start..end].trim().to_owned())
+        } else if FULL_TEXT_NODES.contains(&node.kind()) {
+            Some(node.utf8_text(code.as_bytes()).ok()?.trim().to_owned())
+        } else if node.kind() == "expression_statement" {
+            let is_module_level = node
+                .parent()
+                .map(|parent| parent.kind() == "module")
+                .unwrap_or(false);
+
+            let has_assignment = node
+                .children(&mut node.walk())
+                .any(|c| c.kind() == "assignment");
+
+            if is_module_level && has_assignment {
+                Some(node.utf8_text(code.as_bytes()).ok()?.trim().to_owned())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
 #[test]
 fn test_rs() {
     let mut code_parser = CodeParser::new(CodeLanguage::RUST).unwrap();
 
     let code =
         read_to_string("/home/scrom/code/codevia/codevia-rs/src/core/tools/test.rs").unwrap();
+
+    let resutl = code_parser.get_outline(&code).unwrap();
+
+    println!("{resutl}");
+}
+
+#[test]
+fn test_py() {
+    let mut code_parser = CodeParser::new(CodeLanguage::PYTHON).unwrap();
+
+    let code =
+        read_to_string("/home/scrom/code/codevia/codevia-rs/src/core/tools/test.py").unwrap();
 
     let resutl = code_parser.get_outline(&code).unwrap();
 
