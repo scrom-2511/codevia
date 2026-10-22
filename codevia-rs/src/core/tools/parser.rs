@@ -1,63 +1,17 @@
 use std::fs::read_to_string;
 
-use crate::core::tools::WorkspaceErrors;
 use tree_sitter::{Language, Node, Parser};
 
-#[derive(Clone, Copy)]
-enum Name {
-    Field(&'static str),
-    RustImpl,
-}
+use crate::core::tools::WorkspaceErrors;
 
-#[derive(Clone, Copy)]
-enum FnSig {
-    Fields {
-        params: &'static [&'static str],
-        ret: &'static [&'static str],
-    },
-}
-
-#[derive(Clone, Copy)]
-enum Header {
-    Body(&'static str),
-    WholeNode,
-    Name,
-}
-
-struct Rule {
-    kind: &'static str,
-    label: &'static str,
-    label_field: Option<&'static str>,
-    name: Name,
-    body_field: Option<&'static str>,
-    fn_sig: Option<FnSig>,
-    header: Header,
-}
-
-impl Rule {
-    const fn new(kind: &'static str, label: &'static str) -> Self {
-        Self {
-            kind,
-            label,
-            label_field: None,
-            name: Name::Field("name"),
-            header: Header::Name,
-            body_field: None,
-            fn_sig: None,
-        }
-    }
-}
-
-enum CodeLanguage {
+pub enum CodeLanguage {
     RUST,
-    PYTHON,
 }
 
 impl CodeLanguage {
     pub fn lang(&self) -> Result<Language, WorkspaceErrors> {
         let language = match self {
             CodeLanguage::RUST => tree_sitter_rust::LANGUAGE,
-            CodeLanguage::PYTHON => tree_sitter_python::LANGUAGE,
         }
         .into();
 
@@ -65,225 +19,118 @@ impl CodeLanguage {
     }
 }
 
-const RUST_RULES: &[Rule] = &[
-    // Functions
-    Rule {
-        header: Header::Body("body"),
-        body_field: Some("body"),
-        fn_sig: Some(FnSig::Fields {
-            params: &["parameters"],
-            ret: &["return_type"],
-        }),
-        ..Rule::new("function_item", "fn")
-    },
-    Rule {
-        body_field: None,
-        ..Rule::new("function_signature_item", "fn")
-    },
-    // Types
-    Rule::new("struct_item", "struct"),
-    Rule::new("enum_item", "enum"),
-    Rule::new("union_item", "union"),
-    Rule {
-        header: Header::Body("body"),
-        body_field: Some("body"),
-        ..Rule::new("trait_item", "trait")
-    },
-    Rule {
-        header: Header::Body("body"),
-        body_field: Some("body"),
-        ..Rule::new("mod_item", "mod")
-    },
-    Rule {
-        header: Header::Body("body"),
-        body_field: Some("body"),
-        ..Rule::new("foreign_mod_item", "extern")
-    },
-    Rule {
-        header: Header::Body("body"),
-        name: Name::RustImpl,
-        body_field: Some("body"),
-        ..Rule::new("impl_item", "impl")
-    },
-    Rule::new("type_item", "type"),
-    // Modules and imports
-    Rule {
-        body_field: Some("body"),
-        ..Rule::new("mod_item", "mod")
-    },
-    Rule::new("extern_crate_declaration", "extern crate"),
-    // Values
-    Rule::new("const_item", "const"),
-    Rule::new("static_item", "static"),
-    // Members
-    Rule::new("enum_variant", "variant"),
-    Rule::new("field_declaration", "field"),
-    // Macros
-    Rule::new("macro_definition", "macro"),
-    Rule {
-        name: Name::Field("argument"),
-        ..Rule::new("use_declaration", "use")
-    },
-    Rule {
-        body_field: Some("body"),
-        ..Rule::new("foreign_mod_item", "extern")
-    },
-];
+pub struct CodeParser {
+    language: CodeLanguage,
+    parser: Parser,
+}
 
-const PYTHON_RULES: &[Rule] = &[
-    // Functions and methods
-    Rule {
-        header: Header::Body("body"),
-        body_field: Some("body"),
-        fn_sig: Some(FnSig::Fields {
-            params: &["parameters"],
-            ret: &["return_type"],
-        }),
-        ..Rule::new("function_definition", "def")
-    },
-    // Classes
-    Rule {
-        header: Header::Body("body"),
-        body_field: Some("body"),
-        ..Rule::new("class_definition", "class")
-    },
-    // Type aliases
-    Rule {
-        header: Header::WholeNode,
-        ..Rule::new("type_alias_statement", "type")
-    },
-];
+impl CodeParser {
+    pub fn new(language: CodeLanguage) -> Result<Self, WorkspaceErrors> {
+        let mut parser = Parser::new();
+        parser
+            .set_language(&CodeLanguage::lang(&language).unwrap())
+            .map_err(|e| WorkspaceErrors::new(e.to_string(), crate::core::ErrorKind::TreeSitter))?;
 
-fn describe(node: Node, code: &str, rules: &[Rule]) -> Option<String> {
-    let rule = rules.iter().find(|rule| rule.kind == node.kind())?;
-
-    if node.kind() == "struct_item" {
-        let end = (0..node.child_count())
-            .filter_map(|i| node.child(i))
-            .find(|child| {
-                matches!(
-                    child.kind(),
-                    "field_declaration_list" | "ordered_field_declaration_list" | ";"
-                )
-            })
-            .map(|child| child.start_byte())
-            .unwrap_or(node.end_byte());
-
-        let header = code[node.start_byte()..end]
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ")
-            .trim_end_matches(',')
-            .to_owned();
-
-        return Some(header);
+        Ok(Self { language, parser })
     }
 
-    match rule.header {
-        Header::Body(body_field) => {
-            let body = node.child_by_field_name(body_field)?;
+    fn traverse(&self, node: Node, code: &str, depth: usize) -> String {
+        let mut cursor = node.walk();
 
-            let header = code[node.start_byte()..body.start_byte()]
-                .split_whitespace()
-                .collect::<Vec<_>>()
-                .join(" ")
-                .trim_end_matches(',')
-                .to_owned();
+        let mut final_string = String::new();
 
-            Some(header)
-        }
-
-        Header::WholeNode => Some(
-            node.utf8_text(code.as_bytes())
-                .ok()?
-                .trim()
-                .trim_end_matches(';')
-                .to_owned(),
-        ),
-
-        Header::Name => {
-            if node.kind() == "function_signature_item" {
-                return Some(
-                    node.utf8_text(code.as_bytes())
-                        .ok()?
-                        .trim()
-                        .trim_end_matches(';')
-                        .to_owned(),
-                );
-            }
-
-            let name = match rule.name {
-                Name::Field(field) => node
-                    .child_by_field_name(field)?
-                    .utf8_text(code.as_bytes())
-                    .ok()?,
-
-                Name::RustImpl => {
-                    let trait_node = node.child_by_field_name("trait");
-                    let type_node = node.child_by_field_name("type")?;
-
-                    let type_name = type_node.utf8_text(code.as_bytes()).ok()?;
-
-                    if let Some(trait_node) = trait_node {
-                        let trait_name = trait_node.utf8_text(code.as_bytes()).ok()?;
-
-                        return Some(format!("impl {} for {}", trait_name, type_name));
-                    }
-
-                    return Some(format!("impl {}", type_name));
-                }
+        for child in node.children(&mut cursor) {
+            let description = match &self.language {
+                CodeLanguage::RUST => RustLanguage::describe_node(child, code),
             };
 
-            Some(format!("{} {}", rule.label, name))
+            if let Some(description) = description {
+                final_string.push_str(&"  ".repeat(depth));
+                final_string.push_str(&description);
+                final_string.push('\n');
+            }
+
+            final_string.push_str(&self.traverse(child, code, depth + 1));
         }
+
+        final_string
+    }
+
+    pub fn get_outline(&mut self, code: &str) -> Result<String, WorkspaceErrors> {
+        let tree = self.parser.parse(code, None).ok_or_else(|| {
+            WorkspaceErrors::new(
+                "Failed to parse source code".to_owned(),
+                crate::core::ErrorKind::TreeSitter,
+            )
+        })?;
+
+        let result = self.traverse(tree.root_node(), code, 0);
+
+        Ok(result)
     }
 }
 
-fn traverse(node: Node, code: &str, rules: &[Rule], depth: usize) {
-    let description = describe(node, code, rules);
+trait Describe {
+    fn describe_node(node: Node, code: &str) -> Option<String>;
+}
 
-    let next_depth = if let Some(description) = description {
-        println!("{}{}", "  ".repeat(depth), description);
-        depth + 1
-    } else {
-        depth
-    };
+pub struct RustLanguage;
 
-    let mut cursor = node.walk();
+impl Describe for RustLanguage {
+    fn describe_node(node: Node, code: &str) -> Option<String> {
+        const FULL_TEXT_NODES: &[&str] = &[
+            "type_item",
+            "const_item",
+            "static_item",
+            "extern_crate_declaration",
+        ];
 
-    for child in node.children(&mut cursor) {
-        traverse(child, code, rules, next_depth);
+        const HEADER_NODES: &[&str] = &[
+            "struct_item",
+            "union_item",
+            "enum_item",
+            "trait_item",
+            "impl_item",
+            "function_item",
+            "mod_item",
+            "foreign_mod_item",
+            "function_signature_item",
+        ];
+
+        if node.kind() == "macro_definition" {
+            let name = node
+                .child_by_field_name("name")
+                .unwrap()
+                .utf8_text(code.as_bytes())
+                .unwrap();
+
+            Some(format!("macro_rules! {name}"))
+        } else if HEADER_NODES.contains(&node.kind()) {
+            let start = node.start_byte();
+
+            if let Some(body) = node.child_by_field_name("body") {
+                let end = body.start_byte();
+
+                Some(code[start..end].to_owned())
+            } else {
+                Some(code[start..node.end_byte()].trim().to_owned())
+            }
+        } else if FULL_TEXT_NODES.contains(&node.kind()) {
+            Some(node.utf8_text(&code.as_bytes()).ok()?.to_owned())
+        } else {
+            None
+        }
     }
 }
 
 #[test]
-fn test() {
-    let language = CodeLanguage::PYTHON;
-
-    let mut parser = Parser::new();
-    parser.set_language(&language.lang().unwrap()).unwrap();
+fn test_rs() {
+    let mut code_parser = CodeParser::new(CodeLanguage::RUST).unwrap();
 
     let code =
-        read_to_string("/home/scrom/code/codevia/codevia-rs/src/core/tools/test.py").unwrap();
+        read_to_string("/home/scrom/code/codevia/codevia-rs/src/core/tools/test.rs").unwrap();
 
-    let tree = parser.parse(&code, None).unwrap();
+    let resutl = code_parser.get_outline(&code).unwrap();
 
-    let root = tree.root_node();
-    traverse(root, &code, PYTHON_RULES, 0);
+    println!("{resutl}")
 }
-
-// #[test]
-// fn test2() {
-//     let language = CodeLanguage::RUST;
-
-//     let mut parser = Parser::new();
-//     parser.set_language(&language.lang().unwrap()).unwrap();
-
-//     let code =
-//         read_to_string("/home/scrom/code/codevia/codevia-rs/src/core/tools/test.rs").unwrap();
-
-//     let tree = parser.parse(&code, None).unwrap();
-
-//     let root = tree.root_node();
-//     traverse(root, &code, RUST_RULES, 0);
-// }
