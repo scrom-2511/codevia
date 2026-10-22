@@ -7,6 +7,7 @@ use crate::core::tools::WorkspaceErrors;
 pub enum CodeLanguage {
     RUST,
     PYTHON,
+    JAVA,
 }
 
 impl CodeLanguage {
@@ -14,6 +15,7 @@ impl CodeLanguage {
         let language = match self {
             CodeLanguage::RUST => tree_sitter_rust::LANGUAGE,
             CodeLanguage::PYTHON => tree_sitter_python::LANGUAGE,
+            CodeLanguage::JAVA => tree_sitter_java::LANGUAGE,
         }
         .into();
 
@@ -45,6 +47,7 @@ impl CodeParser {
             let description = match &self.language {
                 CodeLanguage::RUST => RustLanguage::describe_node(child, code),
                 CodeLanguage::PYTHON => PythonLanguage::describe_node(child, code),
+                CodeLanguage::JAVA => JavaLanguage::describe_node(child, code),
             };
 
             if let Some(description) = description {
@@ -177,6 +180,41 @@ impl Describe for PythonLanguage {
     }
 }
 
+pub struct JavaLanguage;
+
+impl Describe for JavaLanguage {
+    fn describe_node(node: Node, code: &str) -> Option<String> {
+        const HEADER_NODES: &[&str] = &[
+            "class_declaration",
+            "interface_declaration",
+            "enum_declaration",
+            "record_declaration",
+            "constructor_declaration",
+            "compact_constructor_declaration",
+            "method_declaration",
+            "annotation_type_declaration",
+        ];
+
+        const FULL_TEXT_NODES: &[&str] = &["package_declaration"];
+
+        if HEADER_NODES.contains(&node.kind()) {
+            let start = node.start_byte();
+
+            let end = if let Some(body) = node.child_by_field_name("body") {
+                body.start_byte()
+            } else {
+                node.end_byte()
+            };
+
+            Some(code[start..end].trim().to_owned())
+        } else if FULL_TEXT_NODES.contains(&node.kind()) {
+            Some(node.utf8_text(code.as_bytes()).ok()?.trim().to_owned())
+        } else {
+            None
+        }
+    }
+}
+
 #[test]
 fn test_rs() {
     let mut code_parser = CodeParser::new(CodeLanguage::RUST).unwrap();
@@ -195,6 +233,18 @@ fn test_py() {
 
     let code =
         read_to_string("/home/scrom/code/codevia/codevia-rs/src/core/tools/test.py").unwrap();
+
+    let resutl = code_parser.get_outline(&code).unwrap();
+
+    println!("{resutl}");
+}
+
+#[test]
+fn test_java() {
+    let mut code_parser = CodeParser::new(CodeLanguage::JAVA).unwrap();
+
+    let code =
+        read_to_string("/home/scrom/code/codevia/codevia-rs/src/core/tools/test.java").unwrap();
 
     let resutl = code_parser.get_outline(&code).unwrap();
 
