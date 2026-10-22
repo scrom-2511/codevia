@@ -108,13 +108,13 @@ impl Describe for RustLanguage {
         } else if HEADER_NODES.contains(&node.kind()) {
             let start = node.start_byte();
 
-            if let Some(body) = node.child_by_field_name("body") {
-                let end = body.start_byte();
-
-                Some(code[start..end].to_owned())
+            let end = if let Some(body) = node.child_by_field_name("body") {
+                body.start_byte()
             } else {
-                Some(code[start..node.end_byte()].trim().to_owned())
-            }
+                node.end_byte()
+            };
+
+            Some(code[start..end].trim().to_owned())
         } else if FULL_TEXT_NODES.contains(&node.kind()) {
             Some(node.utf8_text(&code.as_bytes()).ok()?.to_owned())
         } else {
@@ -132,5 +132,5 @@ fn test_rs() {
 
     let resutl = code_parser.get_outline(&code).unwrap();
 
-    println!("{resutl}")
+    println!("{resutl}");
 }
