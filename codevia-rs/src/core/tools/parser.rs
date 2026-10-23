@@ -9,6 +9,7 @@ pub enum CodeLanguage {
     PYTHON,
     JAVA,
     C,
+    CPP,
 }
 
 impl CodeLanguage {
@@ -18,6 +19,7 @@ impl CodeLanguage {
             CodeLanguage::PYTHON => tree_sitter_python::LANGUAGE,
             CodeLanguage::JAVA => tree_sitter_java::LANGUAGE,
             CodeLanguage::C => tree_sitter_c::LANGUAGE,
+            CodeLanguage::CPP => tree_sitter_cpp::LANGUAGE,
         }
         .into();
 
@@ -51,6 +53,7 @@ impl CodeParser {
                 CodeLanguage::PYTHON => PythonLanguage::describe_node(child, code),
                 CodeLanguage::JAVA => JavaLanguage::describe_node(child, code),
                 CodeLanguage::C => CLanguage::describe_node(child, code),
+                CodeLanguage::CPP => CppLanguage::describe_node(child, code),
             };
 
             if let Some(description) = description {
@@ -291,6 +294,170 @@ impl Describe for CLanguage {
     }
 }
 
+pub struct CppLanguage;
+
+impl Describe for CppLanguage {
+    fn describe_node(node: Node, code: &str) -> Option<String> {
+        let is_valid_scope = |n: Node| -> bool {
+            n.parent()
+                .map(|p| {
+                    p.kind() == "translation_unit"
+                        || p.kind() == "declaration_list"
+                        || p.kind() == "linkage_specification"
+                        || p.kind() == "field_declaration_list"
+                })
+                .unwrap_or(false)
+        };
+
+        let has_function_declarator = |n: Node| -> bool {
+            let mut stack = vec![n];
+            while let Some(curr) = stack.pop() {
+                if curr.kind() == "function_declarator" || curr.kind() == "operator_cast" {
+                    return true;
+                }
+                if curr.id() != n.id()
+                    && (curr.kind() == "field_declaration_list"
+                        || curr.kind() == "compound_statement")
+                {
+                    continue;
+                }
+                let mut c = curr.walk();
+                for child in curr.children(&mut c) {
+                    stack.push(child);
+                }
+            }
+            false
+        };
+
+        if node.kind() == "preproc_def" {
+            Some(node.utf8_text(code.as_bytes()).ok()?.trim().to_owned())
+        } else if node.kind() == "preproc_function_def" {
+            let name = node
+                .child_by_field_name("name")
+                .and_then(|n| n.utf8_text(code.as_bytes()).ok())?;
+            let params = node
+                .child_by_field_name("parameters")
+                .and_then(|n| n.utf8_text(code.as_bytes()).ok())
+                .unwrap_or("");
+
+            Some(format!("#define {name}{params}"))
+        } else if node.kind() == "namespace_definition" || node.kind() == "linkage_specification" {
+            let start = node.start_byte();
+            let end = if let Some(body) = node.child_by_field_name("body") {
+                body.start_byte()
+            } else {
+                node.end_byte()
+            };
+
+            Some(code[start..end].trim().to_owned())
+        } else if node.kind() == "template_declaration" {
+            let last_child = (0..node.child_count())
+                .rev()
+                .find_map(|i| {
+                    let ch = node.child(i).unwrap();
+                    if ch.kind() != ";" && ch.kind() != "comment" {
+                        Some(ch)
+                    } else {
+                        None
+                    }
+                })?;
+
+            let params = node
+                .child_by_field_name("parameters")
+                .and_then(|n| n.utf8_text(code.as_bytes()).ok())
+                .map(|p| p.split_whitespace().collect::<Vec<_>>().join(" "))
+                .unwrap_or_default();
+
+            let inner_header = if let Some(body) = last_child.child_by_field_name("body") {
+                code[last_child.start_byte()..body.start_byte()].trim().to_owned()
+            } else if last_child.kind() == "concept_definition" {
+                let name = last_child
+                    .child_by_field_name("name")
+                    .and_then(|n| n.utf8_text(code.as_bytes()).ok())
+                    .unwrap_or("");
+                format!("concept {name}")
+            } else {
+                code[last_child.start_byte()..last_child.end_byte()].trim().to_owned()
+            };
+
+            Some(format!("template {params} {inner_header}"))
+        } else if ["class_specifier", "struct_specifier", "union_specifier", "enum_specifier"].contains(&node.kind()) {
+            if node.parent().map(|p| p.kind() == "template_declaration" || p.kind() == "type_definition").unwrap_or(false) {
+                return None;
+            }
+
+            let start = node.start_byte();
+            let end = if let Some(body) = node.child_by_field_name("body") {
+                body.start_byte()
+            } else {
+                node.end_byte()
+            };
+
+            Some(code[start..end].trim().to_owned())
+        } else if node.kind() == "function_definition" {
+            if node.parent().map(|p| p.kind() == "template_declaration").unwrap_or(false) {
+                return None;
+            }
+
+            let start = node.start_byte();
+            let end = if let Some(body) = node.child_by_field_name("body") {
+                body.start_byte()
+            } else {
+                node.end_byte()
+            };
+
+            Some(code[start..end].trim().to_owned())
+        } else if node.kind() == "field_declaration" {
+            if node.parent().map(|p| p.kind() == "template_declaration").unwrap_or(false) {
+                return None;
+            }
+
+            if has_function_declarator(node) {
+                Some(node.utf8_text(code.as_bytes()).ok()?.trim().to_owned())
+            } else {
+                None
+            }
+        } else if node.kind() == "concept_definition" {
+            if node.parent().map(|p| p.kind() == "template_declaration").unwrap_or(false) {
+                None
+            } else {
+                let name = node
+                    .child_by_field_name("name")
+                    .and_then(|n| n.utf8_text(code.as_bytes()).ok())
+                    .unwrap_or("");
+                Some(format!("concept {name}"))
+            }
+        } else if node.kind() == "friend_declaration" {
+            Some(node.utf8_text(code.as_bytes()).ok()?.trim().to_owned())
+        } else if node.kind() == "alias_declaration" {
+            if node.parent().map(|p| p.kind() == "template_declaration").unwrap_or(false) {
+                None
+            } else {
+                Some(node.utf8_text(code.as_bytes()).ok()?.trim().to_owned())
+            }
+        } else if ["declaration", "type_definition"].contains(&node.kind()) {
+            if node.parent().map(|p| p.kind() == "template_declaration").unwrap_or(false) {
+                return None;
+            }
+
+            if is_valid_scope(node) {
+                if let Some(type_node) = node.child_by_field_name("type") {
+                    if let Some(body) = type_node.child_by_field_name("body") {
+                        let before = code[node.start_byte()..body.start_byte()].trim();
+                        let after = code[body.end_byte()..node.end_byte()].trim();
+                        return Some(format!("{before} {after}"));
+                    }
+                }
+                Some(node.utf8_text(code.as_bytes()).ok()?.trim().to_owned())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
 #[test]
 fn test_rs() {
     let mut code_parser = CodeParser::new(CodeLanguage::RUST).unwrap();
@@ -336,6 +503,19 @@ fn test_c() {
 
     let code =
         read_to_string("/home/scrom/code/codevia/codevia-rs/src/core/tools/test_files/test.c")
+            .unwrap();
+
+    let result = code_parser.get_outline(&code).unwrap();
+
+    println!("{result}");
+}
+
+#[test]
+fn test_cpp() {
+    let mut code_parser = CodeParser::new(CodeLanguage::CPP).unwrap();
+
+    let code =
+        read_to_string("/home/scrom/code/codevia/codevia-rs/src/core/tools/test_files/test.cpp")
             .unwrap();
 
     let result = code_parser.get_outline(&code).unwrap();
