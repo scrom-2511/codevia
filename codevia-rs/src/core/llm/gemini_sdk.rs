@@ -11,17 +11,17 @@ pub struct GeminiSDK {
     api_key: String,
 }
 
-pub struct InteractionConfig {
-    pub input: String,
-    pub model: Option<String>,
-    pub tools: Option<Value>,
-    pub response_format: Option<Value>,
+pub struct InteractionConfig<'a> {
+    pub input: &'a str,
+    pub model: Option<&'a str>,
+    pub tools: Option<&'a Value>,
+    pub response_format: Option<&'a Value>,
 }
 
-impl Default for InteractionConfig {
+impl<'a> Default for InteractionConfig<'a> {
     fn default() -> Self {
         Self {
-            input: String::new(),
+            input: "",
             model: None,
             tools: None,
             response_format: None,
@@ -42,20 +42,14 @@ impl GeminiSDK {
 
     pub async fn interaction_response(
         &self,
-        config: InteractionConfig,
+        config: InteractionConfig<'_>,
         stream: bool,
     ) -> Result<Response, LLMError> {
         let input = config.input;
 
-        let model = config
-            .model
-            .unwrap_or_else(|| String::from("gemini-3.5-flash"));
+        let model = config.model.unwrap_or_else(|| "gemini-3.5-flash");
 
-        let tools = config
-            .tools
-            .map(|t| serde_json::to_string(&t))
-            .transpose()?;
-
+        let tools = config.tools;
         let response_format = config.response_format;
 
         let mut body = serde_json::json!({
@@ -97,7 +91,7 @@ impl GeminiSDK {
 
     pub async fn create_interaction(
         &self,
-        config: InteractionConfig,
+        config: InteractionConfig<'_>,
     ) -> Result<LLMResponse, LLMError> {
         let res = self.interaction_response(config, false).await?;
 
@@ -112,7 +106,7 @@ impl GeminiSDK {
 
     pub async fn create_interaction_stream(
         &self,
-        config: InteractionConfig,
+        config: InteractionConfig<'_>,
     ) -> Result<impl Stream<Item = Result<String, LLMError>>, LLMError> {
         let res = self.interaction_response(config, true).await?;
 
