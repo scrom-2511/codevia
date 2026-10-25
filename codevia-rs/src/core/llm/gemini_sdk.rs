@@ -75,10 +75,41 @@ impl<'a> GeminiSDK<'a> {
         }
 
         let response_json: Value = res.json().await?;
+        let output_text = self.extract_output_text(&response_json);
 
         Ok(LLMResponse {
-            output_text: response_json.to_string(),
+            output_text,
             response: response_json,
         })
+    }
+
+    pub fn extract_output_text(&self, response: &Value) -> String {
+        if let Some(text) = response.get("output_text").and_then(|v| v.as_str()) {
+            if !text.is_empty() {
+                return text.to_string();
+            }
+        }
+
+        let mut parts = Vec::new();
+
+        if let Some(steps) = response.get("steps").and_then(|v| v.as_array()) {
+            for step in steps {
+                if let Some(content) = step.get("content").and_then(|v| v.as_array()) {
+                    for item in content {
+                        if let Some(text) = item.get("text").and_then(|v| v.as_str()) {
+                            parts.push(text);
+                        }
+                    }
+                } else if let Some(content_str) = step.get("content").and_then(|v| v.as_str()) {
+                    parts.push(content_str);
+                }
+
+                if let Some(text) = step.get("text").and_then(|v| v.as_str()) {
+                    parts.push(text);
+                }
+            }
+        }
+
+        parts.join("")
     }
 }
