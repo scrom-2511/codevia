@@ -1,25 +1,27 @@
 use async_stream::stream;
 use futures::{Stream, StreamExt};
+use reqwest::{Client, Response};
 use serde_json::Value;
 
 use crate::core::llm::{LLMError, types::LLMResponse};
 
-pub struct GeminiSDK<'a> {
-    base_url: &'a str,
-    api_key: &'a str,
+pub struct GeminiSDK {
+    client: Client,
+    base_url: String,
+    api_key: String,
 }
 
-pub struct InteractionConfig<'a> {
-    pub input: &'a str,
-    pub model: Option<&'a str>,
-    pub tools: Option<&'a str>,
-    pub response_format: Option<&'a str>,
+pub struct InteractionConfig {
+    pub input: String,
+    pub model: Option<String>,
+    pub tools: Option<Value>,
+    pub response_format: Option<Value>,
 }
 
-impl<'a> Default for InteractionConfig<'a> {
+impl Default for InteractionConfig {
     fn default() -> Self {
         Self {
-            input: "",
+            input: String::new(),
             model: None,
             tools: None,
             response_format: None,
@@ -27,27 +29,43 @@ impl<'a> Default for InteractionConfig<'a> {
     }
 }
 
-impl<'a> GeminiSDK<'a> {
-    pub fn new(base_url: &'a str, api_key: &'a str) -> Self {
-        Self { base_url, api_key }
+impl GeminiSDK {
+    pub fn new(base_url: String, api_key: String) -> Self {
+        let client = Client::new();
+
+        Self {
+            base_url,
+            api_key,
+            client,
+        }
     }
 
-    pub async fn create_interaction<'b>(
+    pub async fn interaction_response(
         &self,
-        config: InteractionConfig<'b>,
-    ) -> Result<LLMResponse, LLMError> {
+        config: InteractionConfig,
+        stream: bool,
+    ) -> Result<Response, LLMError> {
         let input = config.input;
-        let model = config.model.unwrap_or_else(|| "gemini-3.5-flash");
+
+        let model = config
+            .model
+            .unwrap_or_else(|| String::from("gemini-3.5-flash"));
+
         let tools = config
             .tools
             .map(|t| serde_json::to_string(&t))
             .transpose()?;
+
         let response_format = config.response_format;
 
         let mut body = serde_json::json!({
             "input": input,
             "model": model,
         });
+
+        if stream {
+            body["stream"] = serde_json::json!(true);
+        }
 
         if let Some(response_format) = response_format {
             body["response_format"] = serde_json::json!(response_format);
@@ -57,13 +75,13 @@ impl<'a> GeminiSDK<'a> {
             body["tools"] = serde_json::json!(tools);
         }
 
-        let client = reqwest::Client::new();
         let url = format!("{}", self.base_url);
 
-        let res = client
+        let res = self
+            .client
             .post(url)
             .header("Content-Type", "application/json")
-            .header("X-Goog-Api-Key", self.api_key)
+            .header("X-Goog-Api-Key", self.api_key.as_str())
             .json(&body)
             .send()
             .await?;
@@ -73,6 +91,15 @@ impl<'a> GeminiSDK<'a> {
             let message = res.text().await.unwrap_or_default();
             return Err(LLMError::ApiError { status, message });
         }
+
+        Ok(res)
+    }
+
+    pub async fn create_interaction(
+        &self,
+        config: InteractionConfig,
+    ) -> Result<LLMResponse, LLMError> {
+        let res = self.interaction_response(config, false).await?;
 
         let response_json: Value = res.json().await?;
         let output_text = self.extract_output_text(&response_json);
@@ -83,48 +110,11 @@ impl<'a> GeminiSDK<'a> {
         })
     }
 
-    pub async fn create_interaction_stream<'b>(
+    pub async fn create_interaction_stream(
         &self,
-        config: InteractionConfig<'b>,
+        config: InteractionConfig,
     ) -> Result<impl Stream<Item = Result<String, LLMError>>, LLMError> {
-        let input = config.input;
-        let model = config.model.unwrap_or_else(|| "gemini-3.5-flash");
-        let tools = config
-            .tools
-            .map(|t| serde_json::to_string(&t))
-            .transpose()?;
-        let response_format = config.response_format;
-
-        let mut body = serde_json::json!({
-            "input": input,
-            "model": model,
-            "stream": true
-        });
-
-        if let Some(response_format) = response_format {
-            body["response_format"] = serde_json::json!(response_format);
-        }
-
-        if let Some(tools) = tools {
-            body["tools"] = serde_json::json!(tools);
-        }
-
-        let client = reqwest::Client::new();
-        let url = format!("{}", self.base_url);
-
-        let res = client
-            .post(url)
-            .header("Content-Type", "application/json")
-            .header("X-Goog-Api-Key", self.api_key)
-            .json(&body)
-            .send()
-            .await?;
-
-        if !res.status().is_success() {
-            let status = res.status();
-            let message = res.text().await.unwrap_or_default();
-            return Err(LLMError::ApiError { status, message });
-        }
+        let res = self.interaction_response(config, true).await?;
 
         let mut response_stream = res.bytes_stream();
 
