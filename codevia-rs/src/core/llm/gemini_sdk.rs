@@ -83,6 +83,74 @@ impl<'a> GeminiSDK<'a> {
         })
     }
 
+    pub async fn create_interaction_stream<'b>(
+        &self,
+        config: InteractionConfig<'b>,
+    ) -> Result<impl Stream<Item = Result<String, LLMError>>, LLMError> {
+        let input = config.input;
+        let model = config.model.unwrap_or_else(|| "gemini-3.5-flash");
+        let tools = config
+            .tools
+            .map(|t| serde_json::to_string(&t))
+            .transpose()?;
+        let response_format = config.response_format;
+
+        let mut body = serde_json::json!({
+            "input": input,
+            "model": model,
+            "stream": true
+        });
+
+        if let Some(response_format) = response_format {
+            body["response_format"] = serde_json::json!(response_format);
+        }
+
+        if let Some(tools) = tools {
+            body["tools"] = serde_json::json!(tools);
+        }
+
+        let client = reqwest::Client::new();
+        let url = format!("{}", self.base_url);
+
+        let res = client
+            .post(url)
+            .header("Content-Type", "application/json")
+            .header("X-Goog-Api-Key", self.api_key)
+            .json(&body)
+            .send()
+            .await?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let message = res.text().await.unwrap_or_default();
+            return Err(LLMError::ApiError { status, message });
+        }
+
+        let mut response_stream = res.bytes_stream();
+
+        let output = stream! {
+            while let Some(chunk_result) = response_stream.next().await {
+                match chunk_result {
+                    Ok(chunk) => {
+                        match String::from_utf8(chunk.to_vec()) {
+                            Ok(text) => yield Ok(text),
+                            Err(err) => {
+                                yield Err(LLMError::StreamError(err.to_string()));
+                                break;
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        yield Err(LLMError::from(err));
+                        break;
+                    }
+                }
+            }
+        };
+
+        Ok(output)
+    }
+
     pub fn extract_output_text(&self, response: &Value) -> String {
         if let Some(text) = response.get("output_text").and_then(|v| v.as_str()) {
             if !text.is_empty() {
