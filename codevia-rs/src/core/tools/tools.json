@@ -1,0 +1,335 @@
+[
+  {
+    "type": "function",
+    "name": "create_file",
+    "description": "Creates a new empty file at the specified workspace path. Fails if the file already exists or if the path is outside the workspace. Parent directories are created automatically if they do not exist.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "The relative path of the file to create within the workspace (e.g., 'src/utils.rs' or 'docs/readme.txt'). Must not point outside the workspace."
+        }
+      },
+      "required": ["file_path"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "read_file",
+    "description": "Reads the contents of a file within the workspace. The returned lines are 1-indexed and formatted as '<line_number>: <content>'. An optional line range can be specified using start and end.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "The relative path of the file to read within the workspace."
+        },
+        "start": {
+          "type": "integer",
+          "description": "The 1-indexed line number to start reading from (inclusive). Must be >= 1. Defaults to 1 if omitted."
+        },
+        "end": {
+          "type": "integer",
+          "description": "The 1-indexed line number to stop reading at (inclusive). Must be >= start. Defaults to the last line of the file if omitted."
+        }
+      },
+      "required": ["file_path"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "read_multiple_files",
+    "description": "Reads the contents of multiple files in the workspace at once. Returns a dictionary mapping each file path to its 1-indexed line-numbered content or an error message if the file could not be read.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "A list of relative paths of the files to read within the workspace."
+        },
+        "start": {
+          "type": "integer",
+          "description": "Optional 1-indexed starting line number (inclusive) to apply to all files. Must be >= 1. Defaults to 1."
+        },
+        "end": {
+          "type": "integer",
+          "description": "Optional 1-indexed ending line number (inclusive) to apply to all files. Defaults to the end of each file."
+        }
+      },
+      "required": ["file_paths"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "write_file",
+    "description": "Writes text content to a file at the specified path within the workspace, overwriting existing content. If the file or parent directories do not exist, they will be created automatically.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "The relative path of the file to write to within the workspace."
+        },
+        "content": {
+          "type": "string",
+          "description": "The complete text content to write into the file."
+        }
+      },
+      "required": ["file_path", "content"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "write_multiple_files",
+    "description": "Writes or overwrites text content to multiple files within the workspace in batch. Creates parent directories as needed. Returns a dictionary mapping each file path to a success or error message.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "A key-value map where keys are relative file paths and values are the text content to write into each corresponding file."
+        }
+      },
+      "required": ["files"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "append_to_file",
+    "description": "Appends text content to the end of an existing file within the workspace. Creates the file and any missing parent directories if the file does not already exist.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "The relative path of the file to append to within the workspace."
+        },
+        "content": {
+          "type": "string",
+          "description": "The text content to append to the end of the file."
+        }
+      },
+      "required": ["file_path", "content"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "replace_in_file",
+    "description": "Replaces occurrences of an exact text substring with new text in a file within the workspace. Returns an error if old_text is not found in the file.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "The relative path of the file to modify within the workspace."
+        },
+        "old_text": {
+          "type": "string",
+          "description": "The exact existing text substring to search for and replace."
+        },
+        "new_text": {
+          "type": "string",
+          "description": "The replacement text to insert."
+        },
+        "replace_all": {
+          "type": "boolean",
+          "description": "If true, replaces all occurrences of old_text in the file. If false, replaces only the first occurrence. Defaults to false."
+        }
+      },
+      "required": ["file_path", "old_text", "new_text"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "replace_in_multiple_files",
+    "description": "Replaces occurrences of an exact text substring with new text across multiple files within the workspace. Returns a dictionary mapping each file path to a success status or error message.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "A list of relative file paths in which to perform the replacement."
+        },
+        "old_text": {
+          "type": "string",
+          "description": "The exact existing text substring to search for and replace."
+        },
+        "new_text": {
+          "type": "string",
+          "description": "The replacement text to insert."
+        },
+        "replace_all": {
+          "type": "boolean",
+          "description": "If true, replaces all occurrences of old_text in each file. If false, replaces only the first occurrence in each file. Defaults to false."
+        }
+      },
+      "required": ["file_paths", "old_text", "new_text"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "list_files",
+    "description": "Lists relative paths of files in a directory within the workspace. Automatically skips common non-source directories (.git, node_modules, target, .venv, dist, build, .cache, etc.).",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "The relative directory path to list files from within the workspace (e.g., '.' for workspace root, or 'src')."
+        },
+        "recursive": {
+          "type": "boolean",
+          "description": "Whether to list files recursively in all subdirectories. If false, lists only files in the immediate directory. Defaults to false."
+        }
+      },
+      "required": ["path"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "list_directories",
+    "description": "Lists relative paths of subdirectories in a directory within the workspace. Automatically ignores excluded directories (.git, node_modules, target, etc.).",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "The relative directory path to list subdirectories from within the workspace (e.g., '.' for workspace root)."
+        },
+        "recursive": {
+          "type": "boolean",
+          "description": "Whether to list subdirectories recursively. If false, lists only immediate subdirectories. Defaults to false."
+        }
+      },
+      "required": ["path"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "list_files_and_directories",
+    "description": "Lists both files and subdirectories under a directory within the workspace. Returns an object with two arrays: 'files' and 'directories'. Ignores common excluded directories.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "The relative directory path to inspect within the workspace (e.g., '.' for workspace root)."
+        },
+        "recursive": {
+          "type": "boolean",
+          "description": "Whether to inspect recursively through subdirectories. Defaults to false."
+        }
+      },
+      "required": ["path"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "find_files",
+    "description": "Finds files matching a glob pattern using ripgrep (e.g., '*.rs', '*config*'). Automatically ignores common non-source directories like .git, target, and node_modules.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "description": "The glob pattern to match filenames against (e.g., '*.rs', 'Cargo.toml', '*.test.ts')."
+        },
+        "path": {
+          "type": "string",
+          "description": "The relative directory path to search within (e.g., '.' for workspace root)."
+        }
+      },
+      "required": ["pattern", "path"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "get_file_info",
+    "description": "Retrieves metadata for a specific file or directory within the workspace, including file name, size in bytes, creation and modification timestamps (Unix epoch seconds), and booleans indicating whether it is a file or directory.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "The relative path to the file or directory within the workspace."
+        }
+      },
+      "required": ["file_path"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "search_in_files",
+    "description": "Searches for a regular expression or text pattern across file contents using ripgrep (`rg -n`). Shows matching file paths, line numbers, and content, with support for before/after context lines and multiline matching. Excluded directories are skipped automatically.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "description": "The regular expression or text pattern to search for in file contents."
+        },
+        "path": {
+          "type": "string",
+          "description": "The relative path of the file or directory to search within (e.g., '.' for the whole workspace)."
+        },
+        "before_context": {
+          "type": "integer",
+          "description": "Number of context lines to display before each match (rg -B). Defaults to 0."
+        },
+        "after_context": {
+          "type": "integer",
+          "description": "Number of context lines to display after each match (rg -A). Defaults to 0."
+        },
+        "multiline": {
+          "type": "boolean",
+          "description": "Whether to enable multiline regex search mode (rg -U), allowing patterns to match across newlines. Defaults to false."
+        }
+      },
+      "required": ["pattern", "path"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "search_multiple_patterns",
+    "description": "Searches for multiple regex or text patterns across files in a directory using ripgrep. Returns a dictionary mapping each pattern to its ripgrep search results.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "A list of regular expression or text patterns to search for."
+        },
+        "path": {
+          "type": "string",
+          "description": "The relative path of the file or directory to search within (e.g., '.' for the whole workspace)."
+        },
+        "before_context": {
+          "type": "integer",
+          "description": "Number of lines of context before each match. Defaults to 0."
+        },
+        "after_context": {
+          "type": "integer",
+          "description": "Number of lines of context after each match. Defaults to 0."
+        },
+        "multiline": {
+          "type": "boolean",
+          "description": "Whether to enable multiline regex matching. Defaults to false."
+        }
+      },
+      "required": ["patterns", "path"]
+    }
+  }
+]
