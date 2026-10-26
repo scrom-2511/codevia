@@ -112,7 +112,7 @@ impl FileSystem {
         }
     }
 
-    fn try_create_file(&self, file_path: &str) -> Result<String, WorkspaceErrors> {
+    pub fn try_create_file(&self, file_path: &str) -> Result<String, WorkspaceErrors> {
         let path = self.resolve_write_path(file_path)?;
 
         if path.exists() {

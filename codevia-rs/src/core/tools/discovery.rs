@@ -9,7 +9,7 @@ use std::time::UNIX_EPOCH;
 use crate::core::tools::WorkspaceErrors;
 use crate::core::tools::file_system::FileSystem;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct FileInfo {
     pub name: String,
     pub size_bytes: u64,
@@ -19,12 +19,13 @@ pub struct FileInfo {
     pub is_dir: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct FilesAndDirectories {
     pub files: Vec<String>,
     pub directories: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct Discovery<'a> {
     fs: &'a FileSystem,
 }

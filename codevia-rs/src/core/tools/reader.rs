@@ -7,6 +7,7 @@ use crate::core::ErrorKind;
 use crate::core::tools::WorkspaceErrors;
 use crate::core::tools::file_system::FileSystem;
 
+#[derive(Debug, Clone, Copy)]
 pub struct Reader<'a> {
     fs: &'a FileSystem,
 }
@@ -23,7 +24,7 @@ impl<'a> Reader<'a> {
         }
     }
 
-    fn try_read_file(
+    pub fn try_read_file(
         &self,
         file_path: &str,
         start: Option<usize>,

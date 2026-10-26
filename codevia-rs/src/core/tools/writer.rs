@@ -6,6 +6,7 @@ use crate::core::ErrorKind;
 use crate::core::tools::WorkspaceErrors;
 use crate::core::tools::file_system::FileSystem;
 
+#[derive(Debug, Clone, Copy)]
 pub struct Writer<'a> {
     fs: &'a FileSystem,
 }

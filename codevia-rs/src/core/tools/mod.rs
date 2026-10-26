@@ -3,7 +3,10 @@ use crate::core::ErrorKind;
 pub mod discovery;
 pub mod file_system;
 pub mod reader;
+pub mod tool_registry;
 pub mod writer;
+
+pub use tool_registry::{ToolHandler, ToolRegistry};
 
 #[derive(Debug, thiserror::Error)]
 pub enum WorkspaceErrors {
