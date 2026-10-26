@@ -9,16 +9,13 @@ crossterm = "0.29.0"
 ratatui = "0.30.2"
 strum = "0.28.0"
 thiserror = "2.0.21"
-tree-sitter = "0.27.1"
-tree-sitter-c = "0.24.2"
-tree-sitter-c-sharp = "0.23.5"
-tree-sitter-cpp = "0.23.4"
-tree-sitter-go = "0.25.0"
-tree-sitter-java = "0.23.5"
-tree-sitter-javascript = "0.25.0"
-tree-sitter-kotlin-ng = "1.1.0"
-tree-sitter-python = "0.25.0"
-tree-sitter-ruby = "0.23.1"
-tree-sitter-rust = "0.24.2"
-tree-sitter-swift = "0.7.4"
-tree-sitter-typescript = "0.23.2"
+tokio = { version = "1.32.0", features = ["full"] }
+redis = { version = "1.0.4", features = ["tokio-comp"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+uuid = { version = "1.29.0", features = ["v4"] }
+reqwest = { version = "0.13.5", features = ["json", "stream"] }
+futures-util = "0.3.34"
+async-stream = "0.3.6"
+dotenvy = "0.15.7"
+futures = "0.3.34"
