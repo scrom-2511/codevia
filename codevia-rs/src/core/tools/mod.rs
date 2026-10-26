@@ -1,9 +1,9 @@
 use crate::core::ErrorKind;
 
-mod discovery;
-mod file_system;
-mod reader;
-mod writer;
+pub mod discovery;
+pub mod file_system;
+pub mod reader;
+pub mod writer;
 
 #[derive(Debug, thiserror::Error)]
 pub enum WorkspaceErrors {

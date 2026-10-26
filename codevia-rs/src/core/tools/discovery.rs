@@ -25,12 +25,12 @@ pub struct FilesAndDirectories {
     pub directories: Vec<String>,
 }
 
-pub struct Discovery {
-    fs: FileSystem,
+pub struct Discovery<'a> {
+    fs: &'a FileSystem,
 }
 
-impl Discovery {
-    pub fn new(fs: FileSystem) -> Self {
+impl<'a> Discovery<'a> {
+    pub fn new(fs: &'a FileSystem) -> Self {
         Self { fs }
     }
 

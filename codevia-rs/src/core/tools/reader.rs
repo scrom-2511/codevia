@@ -7,12 +7,12 @@ use crate::core::ErrorKind;
 use crate::core::tools::WorkspaceErrors;
 use crate::core::tools::file_system::FileSystem;
 
-pub struct Reader {
-    fs: FileSystem,
+pub struct Reader<'a> {
+    fs: &'a FileSystem,
 }
 
-impl Reader {
-    pub fn new(fs: FileSystem) -> Self {
+impl<'a> Reader<'a> {
+    pub fn new(fs: &'a FileSystem) -> Self {
         Self { fs }
     }
 

@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 use std::env;
 use std::fs::{self, File};
-use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
 use crate::core::ErrorKind;
 use crate::core::tools::WorkspaceErrors;
 
+#[derive(Clone, Debug)]
 pub struct FileSystem {
     cwd: PathBuf,
     excluded_dirs: HashSet<&'static str>,

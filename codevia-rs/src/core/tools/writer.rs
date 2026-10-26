@@ -6,12 +6,12 @@ use crate::core::ErrorKind;
 use crate::core::tools::WorkspaceErrors;
 use crate::core::tools::file_system::FileSystem;
 
-pub struct Writer {
-    fs: FileSystem,
+pub struct Writer<'a> {
+    fs: &'a FileSystem,
 }
 
-impl Writer {
-    pub fn new(fs: FileSystem) -> Self {
+impl<'a> Writer<'a> {
+    pub fn new(fs: &'a FileSystem) -> Self {
         Self { fs }
     }
 
