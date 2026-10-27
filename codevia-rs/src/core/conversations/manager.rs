@@ -1,7 +1,7 @@
 use redis::AsyncCommands;
 use uuid::Uuid;
 
-use crate::core::conversations::{ChatMessage, ConversationErrors, ToChatHistoryVec};
+use crate::core::conversations::{ChatMessage, ConversationErrors};
 use crate::core::db::Redis;
 
 #[derive(Clone)]

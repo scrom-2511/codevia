@@ -1,4 +1,4 @@
-use std::{fmt, str::FromStr};
+use std::{borrow::Cow, fmt, str::FromStr};
 
 use crate::core::db::DbErrors;
 use redis::RedisError;
@@ -72,22 +72,23 @@ impl FromStr for Role {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChatMessage<'a> {
     pub role: Role,
-    pub content: &'a str,
+    #[serde(borrow)]
+    pub content: Cow<'a, str>,
 }
 
 impl<'a> ChatMessage<'a> {
-    pub fn new(role: Role, content: &'a str) -> Self {
+    pub fn new(role: Role, content: impl Into<Cow<'a, str>>) -> Self {
         Self {
             role,
-            content: content,
+            content: content.into(),
         }
     }
 
-    pub fn user(content: &'a str) -> Self {
+    pub fn user(content: impl Into<Cow<'a, str>>) -> Self {
         Self::new(Role::User, content)
     }
 
-    pub fn model(content: &'a str) -> Self {
+    pub fn model(content: impl Into<Cow<'a, str>>) -> Self {
         Self::new(Role::Model, content)
     }
 }
@@ -117,15 +118,15 @@ impl<'a> From<&ChatMessage<'a>> for String {
 }
 
 pub trait ChatHistoryParser {
-    fn parse_chat_history(&self) -> Result<Vec<ChatMessage>, ConversationErrors>;
+    fn parse_chat_history(&self) -> Result<Vec<ChatMessage<'_>>, ConversationErrors>;
 }
 
 impl ChatHistoryParser for Vec<String> {
-    fn parse_chat_history(&self) -> Result<Vec<ChatMessage>, ConversationErrors> {
+    fn parse_chat_history(&self) -> Result<Vec<ChatMessage<'_>>, ConversationErrors> {
         let chat_history = self
             .iter()
             .map(|item| serde_json::from_str(item))
-            .collect::<Result<Vec<ChatMessage>, _>>()?;
+            .collect::<Result<Vec<ChatMessage<'_>>, _>>()?;
 
         Ok(chat_history)
     }
