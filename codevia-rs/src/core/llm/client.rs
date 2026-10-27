@@ -1,23 +1,40 @@
 use futures::Stream;
+use serde_json::Value;
 
 use crate::core::{
     conversations::ChatMessage,
     llm::{
-        LLMError,
+        ApiKeys, LLMError,
         gemini_sdk::{GeminiSDK, InteractionConfig},
         types::LLMResponse,
     },
 };
 
+#[derive(Clone, Debug)]
+pub struct LlmConfig<'a> {
+    pub input: &'a str,
+    pub model: Option<&'a str>,
+    pub tools: Option<&'a Value>,
+    pub response_format: Option<&'a Value>,
+    pub history: Option<&'a [ChatMessage<'a>]>,
+    pub is_first_call: bool,
+}
+
 pub struct LlmClient {
     model: String,
-    client: GeminiSDK,
+    // client: GeminiSDK,
+    api_keys_provider: ApiKeys,
 }
 
 impl LlmClient {
-    pub fn new(base_url: String, api_key: String, model: String) -> Self {
-        let client = GeminiSDK::new(base_url, api_key);
-        Self { model, client }
+    pub fn new(api_key: String, model: String) -> Self {
+        // let client = GeminiSDK::new(api_key);
+        let api_keys_provider = ApiKeys::new();
+
+        Self {
+            model,
+            api_keys_provider,
+        }
     }
 
     pub fn get_prompt(
@@ -51,20 +68,45 @@ impl LlmClient {
         )
     }
 
-    pub async fn get_response(
-        &self,
-        config: InteractionConfig<'_>,
-    ) -> Result<LLMResponse, LLMError> {
-        let response = self.client.create_interaction(config).await?;
+    pub async fn get_response(&mut self, config: LlmConfig<'_>) -> Result<LLMResponse, LLMError> {
+        let prompt = self.get_prompt(config.input, config.history, None);
+        let inteaction_config = InteractionConfig {
+            model: None,
+            tools: config.tools,
+            response_format: config.response_format,
+            input: &prompt,
+        };
+
+        // let response = self.client.create_interaction(inteaction_config).await?;
+
+        let api_key = self.api_keys_provider.get_key().unwrap();
+        let client = GeminiSDK::new(api_key);
+        let response = client.create_interaction(inteaction_config).await?;
 
         Ok(response)
     }
 
     pub async fn get_response_stream(
-        &self,
-        config: InteractionConfig<'_>,
+        &mut self,
+        config: LlmConfig<'_>,
     ) -> Result<impl Stream<Item = Result<String, LLMError>>, LLMError> {
-        let response = self.client.create_interaction_stream(config).await?;
+        let prompt = self.get_prompt(config.input, config.history, None);
+
+        let inteaction_config = InteractionConfig {
+            model: None,
+            tools: config.tools,
+            response_format: config.response_format,
+            input: &prompt,
+        };
+
+        // let response = self
+        //     .client
+        //     .create_interaction_stream(inteaction_config)
+        //     .await?;
+
+        let api_key = self.api_keys_provider.get_key().unwrap();
+        let client = GeminiSDK::new(api_key);
+        let response = client.create_interaction_stream(inteaction_config).await?;
 
         Ok(response)
     }
