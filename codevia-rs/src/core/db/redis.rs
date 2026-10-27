@@ -1,6 +1,7 @@
 use crate::core::db::DbErrors;
 use redis::{Client, aio::MultiplexedConnection};
 
+#[derive(Clone, Debug)]
 pub struct Redis {
     client: Client,
 }

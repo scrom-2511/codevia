@@ -1,10 +1,16 @@
 use crate::core::ErrorKind;
 
-pub mod discovery;
-pub mod file_system;
-pub mod reader;
-pub mod tool_registry;
-pub mod writer;
+mod discovery;
+mod file_system;
+mod reader;
+mod tool_registry;
+mod writer;
+
+pub use discovery::*;
+pub use file_system::*;
+pub use reader::*;
+pub use tool_registry::*;
+pub use writer::*;
 
 pub use tool_registry::{ToolHandler, ToolRegistry};
 
@@ -20,8 +26,6 @@ pub enum WorkspaceErrors {
     Io(#[from] std::io::Error),
     #[error("Arguments error: {0}")]
     Arguments(String),
-    #[error("Tree-sitter error: {0}")]
-    TreeSitter(String),
 }
 
 impl WorkspaceErrors {
@@ -33,7 +37,6 @@ impl WorkspaceErrors {
             ErrorKind::NotFound => Self::NotFound(message),
             ErrorKind::AccessDenied => Self::AccessDenied(message),
             ErrorKind::AlreadyExists => Self::AlreadyExists(message),
-            ErrorKind::TreeSitter => Self::TreeSitter(message),
         }
     }
 }

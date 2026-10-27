@@ -3,7 +3,7 @@ use futures::{Stream, StreamExt};
 use reqwest::{Client, Response};
 use serde_json::Value;
 
-use crate::core::llm::{LLMError, types::LLMResponse};
+use crate::core::llm::{LLMError, LLMResponse};
 
 pub struct GeminiSDK {
     client: Client,
@@ -30,8 +30,10 @@ impl<'a> Default for InteractionConfig<'a> {
 }
 
 impl GeminiSDK {
-    pub fn new(base_url: String, api_key: String) -> Self {
+    pub fn new(api_key: String) -> Self {
         let client = Client::new();
+        let base_url =
+            String::from("https://generativelanguage.googleapis.com/v1beta/interactions");
 
         Self {
             base_url,
@@ -47,7 +49,7 @@ impl GeminiSDK {
     ) -> Result<Response, LLMError> {
         let input = config.input;
 
-        let model = config.model.unwrap_or_else(|| "gemini-3.5-flash");
+        let model = config.model.unwrap_or_else(|| "gemini-3.5-flash-lite");
 
         let tools = config.tools;
         let response_format = config.response_format;
@@ -107,7 +109,7 @@ impl GeminiSDK {
     pub async fn create_interaction_stream(
         &self,
         config: InteractionConfig<'_>,
-    ) -> Result<impl Stream<Item = Result<String, LLMError>>, LLMError> {
+    ) -> Result<impl Stream<Item = Result<String, LLMError>> + use<>, LLMError> {
         let res = self.interaction_response(config, true).await?;
 
         let mut response_stream = res.bytes_stream();

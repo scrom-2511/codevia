@@ -28,6 +28,8 @@ impl FileSystem {
             "build",
             ".next",
             ".cache",
+            "target",
+            ".env",
         ]
         .into_iter()
         .collect();

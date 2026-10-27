@@ -2,6 +2,8 @@ use ::redis::RedisError;
 
 mod redis;
 
+pub use redis::*;
+
 #[derive(Debug, thiserror::Error)]
 pub enum DbErrors {
     #[error("Redis error: {0}")]

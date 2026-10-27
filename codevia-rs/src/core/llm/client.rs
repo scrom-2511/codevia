@@ -4,9 +4,8 @@ use serde_json::Value;
 use crate::core::{
     conversations::ChatMessage,
     llm::{
-        ApiKeys, LLMError,
+        ApiKeys, LLMError, LLMResponse,
         gemini_sdk::{GeminiSDK, InteractionConfig},
-        types::LLMResponse,
     },
 };
 

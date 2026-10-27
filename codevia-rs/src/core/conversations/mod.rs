@@ -3,9 +3,9 @@ use std::{borrow::Cow, fmt, str::FromStr};
 use crate::core::db::DbErrors;
 use redis::RedisError;
 
-pub mod manager;
+mod manager;
 
-pub use manager::Conversations;
+pub use manager::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, thiserror::Error)]
