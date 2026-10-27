@@ -1,10 +1,7 @@
 use redis::AsyncCommands;
-use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::str::FromStr;
 use uuid::Uuid;
 
-use crate::core::conversations::{ChatMessage, ConversationErrors, Role};
+use crate::core::conversations::{ChatMessage, ConversationErrors, ToChatHistoryVec};
 use crate::core::db::Redis;
 
 #[derive(Clone)]
@@ -36,10 +33,10 @@ impl Conversations {
         Uuid::new_v4().to_string()
     }
 
-    pub async fn add_message(
+    pub async fn add_message<'a>(
         &self,
         conversation_id: &str,
-        message: &ChatMessage,
+        message: &ChatMessage<'a>,
     ) -> Result<(), ConversationErrors> {
         let redis_key = self.redis_key(conversation_id);
         let raw_data = serde_json::to_string(message)?;
@@ -50,20 +47,15 @@ impl Conversations {
         Ok(())
     }
 
-    pub async fn get_history(
+    pub async fn get_raw_history(
         &self,
         conversation_id: &str,
-    ) -> Result<Vec<ChatMessage>, ConversationErrors> {
+    ) -> Result<Vec<String>, ConversationErrors> {
         let redis_key = self.redis_key(conversation_id);
 
         let mut conn = self.redis.get_conn().await?;
         let raw_history: Vec<String> = conn.lrange(redis_key, 0, -1).await?;
 
-        let conversation_history = raw_history
-            .iter()
-            .map(|item| serde_json::from_str(item))
-            .collect::<Result<Vec<ChatMessage>, _>>()?;
-
-        Ok(conversation_history)
+        Ok(raw_history)
     }
 }

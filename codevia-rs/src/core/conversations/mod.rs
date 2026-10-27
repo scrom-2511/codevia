@@ -70,29 +70,29 @@ impl FromStr for Role {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ChatMessage {
+pub struct ChatMessage<'a> {
     pub role: Role,
-    pub content: String,
+    pub content: &'a str,
 }
 
-impl ChatMessage {
-    pub fn new(role: Role, content: impl Into<String>) -> Self {
+impl<'a> ChatMessage<'a> {
+    pub fn new(role: Role, content: &'a str) -> Self {
         Self {
             role,
-            content: content.into(),
+            content: content,
         }
     }
 
-    pub fn user(content: impl Into<String>) -> Self {
+    pub fn user(content: &'a str) -> Self {
         Self::new(Role::User, content)
     }
 
-    pub fn model(content: impl Into<String>) -> Self {
+    pub fn model(content: &'a str) -> Self {
         Self::new(Role::Model, content)
     }
 }
 
-impl Into<String> for ChatMessage {
+impl<'a> Into<String> for ChatMessage<'a> {
     fn into(self) -> String {
         let mut result = String::new();
 
@@ -104,7 +104,7 @@ impl Into<String> for ChatMessage {
     }
 }
 
-impl From<&ChatMessage> for String {
+impl<'a> From<&ChatMessage<'a>> for String {
     fn from(message: &ChatMessage) -> Self {
         let mut result = String::new();
 
@@ -113,5 +113,20 @@ impl From<&ChatMessage> for String {
         result.push_str(&message.content);
 
         result
+    }
+}
+
+pub trait ChatHistoryParser {
+    fn parse_chat_history(&self) -> Result<Vec<ChatMessage>, ConversationErrors>;
+}
+
+impl ChatHistoryParser for Vec<String> {
+    fn parse_chat_history(&self) -> Result<Vec<ChatMessage>, ConversationErrors> {
+        let chat_history = self
+            .iter()
+            .map(|item| serde_json::from_str(item))
+            .collect::<Result<Vec<ChatMessage>, _>>()?;
+
+        Ok(chat_history)
     }
 }
