@@ -6,9 +6,14 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Padding, Paragraph},
 };
 
-use crate::ui::{PromptInputState, styles::colors::Colors};
+use crate::ui::{Component, PromptInputState, UiState, styles::colors::Colors};
 
-pub fn render_prompt_box(area: Rect, frame: &mut Frame, prompt_input_state: &PromptInputState) {
+pub fn render_prompt_box(
+    area: Rect,
+    frame: &mut Frame,
+    prompt_input_state: &PromptInputState,
+    ui_state: &UiState,
+) {
     let prompt_box = Block::new()
         .title(" Prompt Box ")
         .border_type(BorderType::Rounded)
@@ -26,8 +31,13 @@ pub fn render_prompt_box(area: Rect, frame: &mut Frame, prompt_input_state: &Pro
 
     let cursor = Span::from("▁")
         .style(Style::default().fg(Color::White).slow_blink())
-        .add_modifier(Modifier::BOLD)
-        .hidden();
+        .add_modifier(Modifier::BOLD);
+
+    let cursor = if ui_state.is_current_component_focused(&Component::PromptBox) {
+        cursor
+    } else {
+        cursor.hidden()
+    };
 
     let text = Paragraph::new(Line::from(vec![line, cursor]));
 
