@@ -6,14 +6,6 @@ mod reader;
 mod tool_registry;
 mod writer;
 
-pub use discovery::*;
-pub use file_system::*;
-pub use reader::*;
-pub use tool_registry::*;
-pub use writer::*;
-
-pub use tool_registry::{ToolHandler, ToolRegistry};
-
 #[derive(Debug, thiserror::Error)]
 pub enum WorkspaceErrors {
     #[error("Access denied: '{0}' is outside the workspace.")]

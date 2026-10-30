@@ -26,7 +26,7 @@ pub struct LlmClient {
 }
 
 impl LlmClient {
-    pub fn new(api_key: String, model: String) -> Self {
+    pub fn new(_api_key: String, model: String) -> Self {
         // let client = GeminiSDK::new(api_key);
         let api_keys_provider = ApiKeys::new();
 

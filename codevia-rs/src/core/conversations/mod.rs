@@ -5,7 +5,6 @@ use redis::RedisError;
 
 mod manager;
 
-pub use manager::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, thiserror::Error)]
