@@ -7,7 +7,7 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Padding, Paragraph, Widget, Wrap},
 };
 
-use crate::ui::{ChatMessage, ConversationState, Role, ToolType, UiState};
+use crate::ui::{ChatMessage, Component, ConversationState, Role, ToolType, UiState};
 
 enum ItemData<'a> {
     ToolCall {
@@ -27,67 +27,6 @@ pub fn render_conversations(
     ui_state: &UiState,
     conversation_state: &ConversationState,
 ) {
-    let conversation_state = ConversationState {
-        conversation: vec![
-            ChatMessage {
-                role: Role::User,
-                message: "Hello! How are you doing today?",
-            },
-            ChatMessage {
-                role: Role::Model,
-                message: "Hi! I'm doing great, thanks for asking. How can I help you today?",
-            },
-            ChatMessage {
-                role: Role::User,
-                message: "I'm learning Rust and trying to build a terminal-based chat application using Ratatui.",
-            },
-            ChatMessage {
-                role: Role::ToolCall(ToolType::Read, vec!["file.txt"]),
-                message: "",
-            },
-            ChatMessage {
-                role: Role::Model,
-                message: "That's awesome! Ratatui is a great choice for building terminal user interfaces in Rust.\n\nYou can use Paragraph, Block, Layout, and other widgets to build your chat interface.",
-            },
-            ChatMessage {
-                role: Role::ToolCall(ToolType::Write, vec!["file2.txt"]),
-                message: "",
-            },
-            ChatMessage {
-                role: Role::User,
-                message: "How should I structure my application?",
-            },
-            ChatMessage {
-                role: Role::Model,
-                message: "I recommend separating your application into three main parts:\n\n1. Application state - Stores messages, input text, and UI state.\n2. Event handling - Handles keyboard input and user interactions.\n3. Rendering - Draws the interface using Ratatui widgets.",
-            },
-            ChatMessage {
-                role: Role::User,
-                message: "Can you show me a simple Rust function for adding messages?",
-            },
-            ChatMessage {
-                role: Role::Model,
-                message: "Sure! You can create a helper method like this:\n\nfn add_message(&mut self, role: Role, message: String) {\n    self.conversation.push(ChatMessage {\n        role,\n        message,\n    });\n}",
-            },
-            ChatMessage {
-                role: Role::User,
-                message: "Perfect! Next, I want to add scrolling.",
-            },
-            ChatMessage {
-                role: Role::Model,
-                message: "You can implement scrolling using a vertical Scrollbar or by tracking a scroll offset in your application state.",
-            },
-            ChatMessage {
-                role: Role::User,
-                message: "How should I structure my application?",
-            },
-            ChatMessage {
-                role: Role::Model,
-                message: "I recommend separating your application into three main parts:\n\n1. Application state - Stores messages, input text, and UI state.\n2. Event handling - Handles keyboard input and user interactions.\n3. Rendering - Draws the interface using Ratatui widgets.",
-            },
-        ],
-    };
-
     let mut items: Vec<ItemData> = Vec::with_capacity(conversation_state.conversation.len());
 
     for chat_message in &conversation_state.conversation {
@@ -251,7 +190,8 @@ fn get_buffer_from_text(lines: Vec<Line>, area: Rect) -> Buffer {
 fn render_buffer(buffer: &Buffer, frame: &mut Frame, viewport: Rect, ui_state: &UiState) {
     let frame_buffer = frame.buffer_mut();
 
-    let scroll = ui_state.scroll.get_offset(&ui_state.component_focus) as u16;
+    let max_scroll = buffer.area.height.saturating_sub(viewport.height);
+    let scroll = (ui_state.scroll.get_offset(&Component::Conversations) as u16).min(max_scroll);
 
     for y in viewport.y..viewport.bottom() {
         let source_y = y + scroll;
