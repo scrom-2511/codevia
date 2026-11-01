@@ -20,7 +20,7 @@ impl Scroll {
         let current_focused_component = component_focus.get_current_focused_component();
 
         if let Some(offset) = self.components.get_mut(&current_focused_component) {
-            *offset += 1;
+            *offset = offset.saturating_add(1);
         }
     }
 
@@ -28,7 +28,16 @@ impl Scroll {
         let current_focused_component = component_focus.get_current_focused_component();
 
         if let Some(offset) = self.components.get_mut(&current_focused_component) {
-            *offset += 1;
+            *offset = (*offset - 1).max(0);
         }
+    }
+
+    pub fn get_offset(&self, component_focus: &ComponentFocus) -> i16 {
+        let current_focused_component = component_focus.get_current_focused_component();
+
+        *self
+            .components
+            .get(&current_focused_component)
+            .unwrap_or(&0)
     }
 }

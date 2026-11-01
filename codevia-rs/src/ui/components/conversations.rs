@@ -1,12 +1,13 @@
 use ratatui::{
     Frame,
+    buffer::Buffer,
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Padding, Paragraph, Wrap},
+    widgets::{Block, BorderType, Borders, Padding, Paragraph, Widget, Wrap},
 };
 
-use crate::ui::{ChatMessage, ConversationState, Role, ToolType};
+use crate::ui::{ChatMessage, ConversationState, Role, ToolType, UiState};
 
 enum ItemData<'a> {
     ToolCall {
@@ -20,7 +21,12 @@ enum ItemData<'a> {
     },
 }
 
-pub fn render_conversations(area: Rect, frame: &mut Frame) {
+pub fn render_conversations(
+    area: Rect,
+    frame: &mut Frame,
+    ui_state: &UiState,
+    conversation_state: &ConversationState,
+) {
     let conversation_state = ConversationState {
         conversation: vec![
             ChatMessage {
@@ -82,8 +88,6 @@ pub fn render_conversations(area: Rect, frame: &mut Frame) {
         ],
     };
 
-    let usable_width = area.width;
-
     let mut items: Vec<ItemData> = Vec::with_capacity(conversation_state.conversation.len());
 
     for chat_message in &conversation_state.conversation {
@@ -123,7 +127,7 @@ pub fn render_conversations(area: Rect, frame: &mut Frame) {
                     .border_style(Style::default().fg(border_color))
                     .padding(Padding::horizontal(1));
 
-                let content_width = usable_width.saturating_sub(2).max(1);
+                let content_width = area.width.saturating_sub(2).max(1);
                 let visual_lines = estimate_visual_lines(&inner_lines, content_width);
                 let needed_height = visual_lines.saturating_add(2); // +2 for top & bottom borders
 
@@ -164,7 +168,7 @@ pub fn render_conversations(area: Rect, frame: &mut Frame) {
 
                 lines.push(Line::from(chat_message.message));
 
-                let content_width = usable_width.max(1);
+                let content_width = area.width.max(1);
                 let visual_lines = estimate_visual_lines(&lines, content_width);
 
                 items.push(ItemData::TextMessage {
@@ -173,43 +177,92 @@ pub fn render_conversations(area: Rect, frame: &mut Frame) {
                 });
             }
         }
+
+        items.push(ItemData::TextMessage {
+            lines: vec![Line::from("")],
+            height: 1,
+        });
     }
 
-    // The height from which we start rendering items
-    let mut start_height_for_rendering_items: u16 = area.y;
+    // Total height of the conversation.
+    let total_height: u16 = items
+        .iter()
+        .map(|item| match item {
+            ItemData::ToolCall { height, .. } => *height,
+            ItemData::TextMessage { height, .. } => *height,
+        })
+        .sum();
 
-    // The maximum height until which we can render items
-    let max_height_for_rendering_items = area.y.saturating_add(area.height);
+    // Allocate a buffer tall enough for the entire conversation.
+    let content_area = Rect::new(area.x, area.y, area.width, total_height.max(area.height));
+
+    let mut combined_buffer = Buffer::empty(content_area);
+
+    let mut current_y = area.y;
 
     for item in items {
-        let curr_item_height = match item {
-            ItemData::ToolCall { height, .. } => height,
-            ItemData::TextMessage { height, .. } => height,
+        let height = match &item {
+            ItemData::ToolCall { height, .. } => *height,
+            ItemData::TextMessage { height, .. } => *height,
         };
 
-        let widget_area = Rect {
-            x: area.x,
-            y: start_height_for_rendering_items,
-            width: usable_width,
-            height: curr_item_height,
-        };
+        let item_area = Rect::new(area.x, current_y, area.width, height);
 
-        if widget_area.y < max_height_for_rendering_items {
-            match item {
-                ItemData::ToolCall { block, lines, .. } => {
-                    let paragraph = Paragraph::new(lines)
-                        .block(block)
-                        .wrap(Wrap { trim: false });
-                    frame.render_widget(paragraph, widget_area);
-                }
-                ItemData::TextMessage { lines, .. } => {
-                    let paragraph = Paragraph::new(lines).wrap(Wrap { trim: false });
-                    frame.render_widget(paragraph, widget_area);
-                }
+        let buffer = match item {
+            ItemData::ToolCall { block, lines, .. } => {
+                get_buffer_from_block(&block, &lines, item_area)
             }
+
+            ItemData::TextMessage { lines, .. } => get_buffer_from_text(lines, item_area),
+        };
+
+        combined_buffer.merge(&buffer);
+
+        current_y += height;
+    }
+
+    render_buffer(&combined_buffer, frame, area, ui_state);
+}
+
+fn get_buffer_from_block(block: &Block, lines: &[Line], area: Rect) -> Buffer {
+    let mut buffer = Buffer::empty(area);
+
+    let inner_area = block.inner(area);
+
+    block.render(area, &mut buffer);
+
+    Paragraph::new(lines.to_vec())
+        .wrap(Wrap { trim: false })
+        .render(inner_area, &mut buffer);
+
+    buffer
+}
+
+fn get_buffer_from_text(lines: Vec<Line>, area: Rect) -> Buffer {
+    let mut buffer = Buffer::empty(area);
+
+    Paragraph::new(lines)
+        .wrap(Wrap { trim: false })
+        .render(area, &mut buffer);
+
+    buffer
+}
+
+fn render_buffer(buffer: &Buffer, frame: &mut Frame, viewport: Rect, ui_state: &UiState) {
+    let frame_buffer = frame.buffer_mut();
+
+    let scroll = ui_state.scroll.get_offset(&ui_state.component_focus) as u16;
+
+    for y in viewport.y..viewport.bottom() {
+        let source_y = y + scroll;
+
+        if source_y >= buffer.area.bottom() {
+            break;
         }
 
-        start_height_for_rendering_items += curr_item_height + 1;
+        for x in viewport.x..viewport.right() {
+            frame_buffer[(x, y)] = buffer[(x, source_y)].clone();
+        }
     }
 }
 
