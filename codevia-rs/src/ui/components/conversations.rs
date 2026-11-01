@@ -7,7 +7,9 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Padding, Paragraph, Widget, Wrap},
 };
 
-use crate::ui::{ChatMessage, Component, ConversationState, Role, ToolType, UiState};
+use crate::ui::{
+    ChatMessage, Component, ConversationState, Role, ToolType, UiState, colors::Colors,
+};
 
 enum ItemData<'a> {
     ToolCall {
@@ -79,33 +81,32 @@ pub fn render_conversations(
             _ => {
                 let mut lines: Vec<Line> = Vec::new();
 
-                let role_span = if chat_message.role == Role::User {
-                    Span::styled(
-                        "You:",
-                        Style::default()
-                            .fg(Color::Cyan)
-                            .add_modifier(Modifier::BOLD),
-                    )
+                if chat_message.role == Role::User {
+                    lines.push(
+                        Line::from(vec![
+                            Span::styled("❯ ", Style::default().add_modifier(Modifier::BOLD)),
+                            Span::styled(
+                                chat_message.message,
+                                Style::default().add_modifier(Modifier::BOLD),
+                            ),
+                            Span::from(" "),
+                        ])
+                        .style(Style::default().bg({
+                            let (r, g, b) = Colors::Card.rgb();
+                            Color::Rgb(r, g, b)
+                        })),
+                    );
                 } else {
-                    Span::styled(
-                        "Assistant:",
-                        Style::default()
-                            .fg(Color::Green)
-                            .add_modifier(Modifier::BOLD),
-                    )
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            "◆ ",
+                            Style::default()
+                                .fg(Color::White)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::from(chat_message.message),
+                    ]));
                 };
-
-                lines.push(Line::from(vec![
-                    Span::styled(
-                        "❯ ",
-                        Style::default()
-                            .fg(Color::Green)
-                            .add_modifier(Modifier::BOLD),
-                    ),
-                    role_span,
-                ]));
-
-                lines.push(Line::from(chat_message.message));
 
                 let content_width = area.width.max(1);
                 let visual_lines = estimate_visual_lines(&lines, content_width);
@@ -137,7 +138,7 @@ pub fn render_conversations(
 
     let mut combined_buffer = Buffer::empty(content_area);
 
-    let mut current_y = area.y;
+    let mut current_y = area.y + 1;
 
     for item in items {
         let height = match &item {
