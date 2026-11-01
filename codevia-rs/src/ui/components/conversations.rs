@@ -24,7 +24,7 @@ enum ItemData<'a> {
 pub fn render_conversations(
     area: Rect,
     frame: &mut Frame,
-    ui_state: &UiState,
+    ui_state: &mut UiState,
     conversation_state: &ConversationState,
 ) {
     let mut items: Vec<ItemData> = Vec::with_capacity(conversation_state.conversation.len());
@@ -187,14 +187,18 @@ fn get_buffer_from_text(lines: Vec<Line>, area: Rect) -> Buffer {
     buffer
 }
 
-fn render_buffer(buffer: &Buffer, frame: &mut Frame, viewport: Rect, ui_state: &UiState) {
+fn render_buffer(buffer: &Buffer, frame: &mut Frame, viewport: Rect, ui_state: &mut UiState) {
     let frame_buffer = frame.buffer_mut();
 
-    let max_scroll = buffer.area.height.saturating_sub(viewport.height);
-    let scroll = (ui_state.scroll.get_offset(&Component::Conversations) as u16).min(max_scroll);
+    let max_offset = buffer.area.height.saturating_sub(viewport.height);
+    ui_state
+        .scroll
+        .set_max_offset(&Component::Conversations, max_offset as i16);
+
+    let scroll_offset = ui_state.scroll.get_offset(&Component::Conversations) as u16;
 
     for y in viewport.y..viewport.bottom() {
-        let source_y = y + scroll;
+        let source_y = y + scroll_offset;
 
         if source_y >= buffer.area.bottom() {
             break;
