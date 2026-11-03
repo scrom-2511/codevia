@@ -16,6 +16,7 @@ pub struct InteractionConfig<'a> {
     pub model: Option<&'a str>,
     pub tools: Option<&'a Value>,
     pub response_format: Option<&'a Value>,
+    pub system_instruction: Option<&'a str>,
 }
 
 impl<'a> Default for InteractionConfig<'a> {
@@ -25,6 +26,7 @@ impl<'a> Default for InteractionConfig<'a> {
             model: None,
             tools: None,
             response_format: None,
+            system_instruction: Some(""),
         }
     }
 }
@@ -53,6 +55,7 @@ impl GeminiSDK {
 
         let tools = config.tools;
         let response_format = config.response_format;
+        let system_instructions = config.system_instruction;
 
         let mut body = serde_json::json!({
             "input": input,
@@ -69,6 +72,10 @@ impl GeminiSDK {
 
         if let Some(tools) = tools {
             body["tools"] = serde_json::json!(tools);
+        }
+
+        if let Some(system_instruction) = system_instructions {
+            body["system_instruction"] = serde_json::json!(system_instruction)
         }
 
         let url = format!("{}", self.base_url);

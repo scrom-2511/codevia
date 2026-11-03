@@ -3,6 +3,8 @@ mod client;
 mod gemini_sdk;
 
 pub use api_keys_provider::*;
+pub use client::*;
+pub use gemini_sdk::*;
 use serde_json::Value;
 
 #[derive(Debug, thiserror::Error)]

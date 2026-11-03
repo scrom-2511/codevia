@@ -1,12 +1,12 @@
 use futures::Stream;
 use serde_json::Value;
 
-use crate::core::{
-    conversations::ChatMessage,
-    llm::{
+use crate::{
+    core::llm::{
         ApiKeys, LLMError, LLMResponse,
         gemini_sdk::{GeminiSDK, InteractionConfig},
     },
+    shared::ChatMessage,
 };
 
 #[derive(Clone, Debug)]
@@ -36,12 +36,7 @@ impl LlmClient {
         }
     }
 
-    pub fn get_prompt(
-        &self,
-        query: &str,
-        history: Option<&[ChatMessage]>,
-        code_context: Option<&str>,
-    ) -> String {
+    pub fn get_system_instruction(&self, history: Option<&[ChatMessage]>) -> String {
         let history_section = if let Some(history) = history {
             let mut s = String::new();
 
@@ -55,25 +50,36 @@ impl LlmClient {
             String::new()
         };
 
-        let mut code_section = String::new();
-
-        if let Some(code) = code_context {
-            if !code.is_empty() {
-                code_section = format!("### Code Context\n{}\n\n", code);
-            }
-        }
         format!(
-            "You are a codebase assistant. Answer the user's question using the provided context and conversation history.\n\n### Instructions\n- Answer based on the provided code context.\n- Mention relevant file paths.\n- If the context does not contain enough information, state that clearly.\n- You have access to tools. If a tool can help you answer the user's question or perform a requested action, call the appropriate tool.\n\n{code_section}{history_section}### Current Question\n{query}"
+            r#"You are an intelligent codebase assistant. Your task is to answer the user's questions and perform requested actions using the provided codebase context and conversation history.
+            ### Instructions
+            1. Use the provided context: Base your answers on the available codebase context and conversation history. Do not make assumptions or invent information.
+            2. Reference file paths: Whenever relevant, mention the exact file paths, functions, classes, or components involved.
+            3. Be transparent: If the provided context does not contain enough information to answer a question confidently, clearly state what is missing.
+            4. Use tools when necessary: You have access to tools. If a tool can help you investigate the codebase, retrieve additional information, or perform the requested action, use the appropriate tool.
+            5. Keep tool updates brief: Before or while calling tools, provide a short status message such as "Reading files..." or "Analyzing code...". Avoid lengthy explanations.
+            6. No Markdown formatting: Respond using plain text. Do not use Markdown headings, bullet points, tables, code fences, or other Markdown formatting.
+            7. Be concise and relevant: Answer the user's question directly. Avoid unnecessary explanations, repetition, or unrelated information.
+            8. Preserve conversation context: Consider previous messages when interpreting the current question. Do not ask for information that has already been provided.
+            9. Perform requested actions: When the user asks you to make changes, fix bugs, or implement something, use the available tools to complete the task rather than merely explaining how to do it.
+
+
+            ### Conversation History
+            {}"#,
+            history_section
         )
     }
 
     pub async fn get_response(&mut self, config: LlmConfig<'_>) -> Result<LLMResponse, LLMError> {
-        let prompt = self.get_prompt(config.input, config.history, None);
+        let prompt = config.input;
+        let history = self.get_system_instruction(config.history);
+
         let inteaction_config = InteractionConfig {
             model: None,
             tools: config.tools,
             response_format: config.response_format,
             input: &prompt,
+            system_instruction: Some(&history.as_str()),
         };
 
         // let response = self.client.create_interaction(inteaction_config).await?;
@@ -89,13 +95,15 @@ impl LlmClient {
         &mut self,
         config: LlmConfig<'_>,
     ) -> Result<impl Stream<Item = Result<String, LLMError>>, LLMError> {
-        let prompt = self.get_prompt(config.input, config.history, None);
+        let prompt = config.input;
+        let history = self.get_system_instruction(config.history);
 
         let inteaction_config = InteractionConfig {
             model: None,
             tools: config.tools,
             response_format: config.response_format,
             input: &prompt,
+            system_instruction: Some(&history.as_str()),
         };
 
         // let response = self
